@@ -1,4 +1,4 @@
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 
@@ -15,6 +15,8 @@ const sourcePath = resolve(root, config.source?.path ?? 'slides.md');
 const scriptPath = resolve(root, 'presentation-script.md');
 const outputs = config.outputs ?? {};
 const pagesEnabled = featureEnabled(config.publish?.githubPages);
+const pagesPresentationScriptEnabled = featureEnabled(config.publish?.githubPages?.presentationScript);
+const htmlOutputPath = outputs.html?.path ?? 'dist/site/index.html';
 const sourceMarkdown = await readFile(sourcePath, 'utf8');
 const parsedSource = parseSlideSource(sourceMarkdown);
 const finalSlideKeys = getFinalSlideKeys(parsedSource);
@@ -24,8 +26,15 @@ const presentationScript = await validatePresentationScript({
   requireComplete: requireCompleteScript,
 });
 
+if (pagesPresentationScriptEnabled && !pagesEnabled) {
+  throw new Error('publish.githubPages.presentationScript.enabled requires GitHub Pages publishing to be enabled');
+}
+if (pagesPresentationScriptEnabled && presentationScript.status === 'not-present') {
+  throw new Error('Publishing presentation-script.md requires the file to exist');
+}
+
 const buildPlan = {
-  version: 6,
+  version: 7,
   source: config.source,
   renderer: 'marp',
   navigation: {
@@ -39,7 +48,11 @@ const buildPlan = {
   publish: {
     githubPages: {
       status: pagesEnabled ? 'enabled' : 'disabled',
-      source: 'html'
+      source: 'html',
+      presentationScript: {
+        status: pagesPresentationScriptEnabled ? 'enabled' : 'disabled',
+        publicPath: pagesPresentationScriptEnabled ? 'presentation-script.md' : null
+      }
     }
   }
 };
@@ -58,11 +71,16 @@ if (unsupportedOutputs.length > 0) {
 
 const marpSourcePath = await createMarpInput(sourcePath, sourceMarkdown, parsedSource);
 try {
-  await renderMarp(marpSourcePath, resolve(root, outputs.html.path ?? 'dist/site/index.html'), []);
+  await renderMarp(marpSourcePath, resolve(root, htmlOutputPath), []);
   buildPlan.outputs.html = {
     status: 'generated',
-    path: outputs.html.path ?? 'dist/site/index.html'
+    path: htmlOutputPath
   };
+
+  if (pagesPresentationScriptEnabled) {
+    const publishedScriptPath = resolve(root, dirname(htmlOutputPath), 'presentation-script.md');
+    await copyFile(scriptPath, publishedScriptPath);
+  }
 
   if (outputs.pdf?.enabled === true) {
     const pdfPath = outputs.pdf.path ?? 'dist/slides.pdf';
