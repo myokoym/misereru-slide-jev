@@ -2,6 +2,7 @@
 
 TypeSafe AI の **Jev / System One Models** を継続的に調査し、Markdownスライドとして整理するrepositoryです。
 
+- [`AGENTS.md`](AGENTS.md): このrepositoryをAI agentが継続更新するときの正本・同期・公開・誤操作防止ルール
 - [`slides.md`](slides.md): 人に見せるための要約・スライド正本
 - [`presentation-script.md`](presentation-script.md): stable `key` で各slideに対応する発表原稿の正本
 - [`article.md`](article.md): スライドを見なくても単体で読める記事形式の正本
@@ -12,6 +13,14 @@ TypeSafe AI の **Jev / System One Models** を継続的に調査し、Markdown�
 - 公開スライド: https://myokoym.github.io/misereru-slide-jev/
 - 公開発表原稿: https://myokoym.github.io/misereru-slide-jev/presentation-script.html
 - 公開記事: https://myokoym.github.io/misereru-slide-jev/article.html
+
+## AI agentの運用
+
+Jev資料をAIで更新する場合は、最初に [`AGENTS.md`](AGENTS.md) を確認します。
+
+このrepositoryでは「スライドを更新」「資料を更新」「調査結果を反映」は、**既存repository内の正本を継続更新する依頼**として扱います。明示依頼がない限り、別PPTX、別Markdown一式、別repository、別ホスティング先を新規作成しません。
+
+調査更新の基本順序は `research.md` → `slides.md` → 必要に応じて `presentation-script.md` / `article.md` → build / Pages deploy確認です。詳細な同期条件と禁止事項は`AGENTS.md`を正とします。
 
 ## 調査方針
 
