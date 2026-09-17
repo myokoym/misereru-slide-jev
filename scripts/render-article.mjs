@@ -7,24 +7,20 @@ const configPath = resolve(root, process.env.MISERERU_CONFIG ?? 'misereru.config
 const config = JSON.parse(await readFile(configPath, 'utf8'));
 const pagesEnabled = featureEnabled(config.publish?.githubPages);
 const articlePublishingEnabled = featureEnabled(config.publish?.githubPages?.article);
+const articlePath = resolve(root, 'article.md');
+const planPath = resolve(root, 'dist/build-plan.json');
 
-if (!articlePublishingEnabled) {
-  process.exit(0);
-}
-if (!pagesEnabled) {
+if (articlePublishingEnabled && !pagesEnabled) {
   throw new Error('publish.githubPages.article.enabled requires GitHub Pages publishing to be enabled');
 }
-
-const articlePath = resolve(root, 'article.md');
-const htmlOutputPath = config.outputs?.html?.path ?? 'dist/site/index.html';
-const siteDir = resolve(root, dirname(htmlOutputPath));
-const publishedArticlePath = resolve(siteDir, 'article.html');
-const planPath = resolve(root, 'dist/build-plan.json');
 
 let articleMarkdown;
 try {
   articleMarkdown = await readFile(articlePath, 'utf8');
 } catch (error) {
+  if (error?.code === 'ENOENT' && !articlePublishingEnabled) {
+    process.exit(0);
+  }
   if (error?.code === 'ENOENT') {
     throw new Error('Publishing article.html requires article.md to exist');
   }
@@ -53,6 +49,23 @@ const articleBody = await marked.parse(articleMarkdown, {
   gfm: true,
   breaks: false,
 });
+
+const buildPlan = JSON.parse(await readFile(planPath, 'utf8'));
+buildPlan.article = {
+  status: 'validated',
+  path: 'article.md',
+  title: articleTitle,
+};
+
+if (!articlePublishingEnabled) {
+  await writeFile(planPath, `${JSON.stringify(buildPlan, null, 2)}\n`, 'utf8');
+  console.log('Validated article.md');
+  process.exit(0);
+}
+
+const htmlOutputPath = config.outputs?.html?.path ?? 'dist/site/index.html';
+const siteDir = resolve(root, dirname(htmlOutputPath));
+const publishedArticlePath = resolve(siteDir, 'article.html');
 const slideDocument = htmlOutputPath.split('/').pop() || 'index.html';
 const scriptPublished = featureEnabled(config.publish?.githubPages?.presentationScript);
 
@@ -66,7 +79,6 @@ const html = renderArticleHtml({
 await mkdir(siteDir, { recursive: true });
 await writeFile(publishedArticlePath, html, 'utf8');
 
-const buildPlan = JSON.parse(await readFile(planPath, 'utf8'));
 buildPlan.publish ??= {};
 buildPlan.publish.githubPages ??= {};
 buildPlan.publish.githubPages.article = {
