@@ -57,7 +57,9 @@ GitHub Pagesで原稿を公開する場合は、`misereru.config.json` の次の
 - `presentation-script.md` を作成・編集しただけでは公開設定を変更しない
 - GitHub Pages自体が有効でも、原稿公開を自動的に有効とみなさない
 - ユーザーが原稿の公開を明示的に求めた場合だけ `presentationScript.enabled` を変更する
-- 公開が有効な場合、Pagesルートの `presentation-script.md` として公開される
+- 公開が有効な場合、正本Markdownを検証したうえでPagesルートの `presentation-script.html` として閲覧用HTMLを生成する
+- 公開HTMLは実際のpresentation順で並べ、slide番号・見出し・Narrationと対応スライドへのリンクを持つ
+- raw `presentation-script.md` 自体はPagesへ公開しない
 - partial script / complete scriptの区別と公開可否を混同しない
 - publish/output設定の変更を、原稿内容の編集へ付随する変更として勝手に行わない
 
