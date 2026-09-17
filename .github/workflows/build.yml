@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - 'slides.md'
+      - 'presentation-script.md'
       - 'misereru.config.json'
       - 'themes/**'
       - 'marp.config.mjs'
