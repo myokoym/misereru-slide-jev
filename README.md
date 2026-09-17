@@ -21,6 +21,7 @@ TypeSafe AI の **Jev / System One Models** を継続的に調査し、Markdown�
 - 「型として不正な出力をしない」と「意味的に正しい判断」を混同しない
 - 日本語の有用な検証記事があれば優先的に追加する
 - 新情報が出ても、重要度が低いものはスライドへ直接追加せず `research.md` に留める
+- Jev固有の優位を主張する場合は、LLMのlogit/logprobs利用や既存の専用ロジックでも代替できないか比較する
 
 ## Agent Skills
 
@@ -44,8 +45,10 @@ TypeSafe AI の **Jev / System One Models** を継続的に調査し、Markdown�
 - price / latency / rate limit / early access条件
 - accuracy / calibrationの独立検証
 - agent routing / browser automation / RAG / guardrailでの実用例
-- 日本・アジア圏からの実測
+- real-time / game / interactive用途の公開デモ、harness、再現実測
+- 日本・アジア圏からの実測とリージョン差
 - OpenAI / Anthropic / Google等の既存モデルとの役割分担
+- LLMのlogit/logprobs利用、rule / utility AI、専用modelとの比較
 - production利用時のSLA・privacy・data retention
 
 ## スライド生成・公開
