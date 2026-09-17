@@ -6,11 +6,13 @@ on:
     paths:
       - 'slides.md'
       - 'presentation-script.md'
+      - 'article.md'
       - 'misereru.config.json'
       - 'themes/**'
       - 'marp.config.mjs'
       - 'scripts/build-project.mjs'
       - 'scripts/render-presentation-script.mjs'
+      - 'scripts/render-article.mjs'
       - 'package.json'
       - '.github/workflows/build.yml'
 
