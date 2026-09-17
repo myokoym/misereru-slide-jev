@@ -33,6 +33,34 @@ complete script
 
 ユーザーが原稿を求めていない場合、`presentation-script.md` を勝手に作成・必須化しません。
 
+## 公開設定との分離
+
+発表原稿を作成・更新することと、その原稿を公開することは別の操作です。
+
+GitHub Pagesで原稿を公開する場合は、`misereru.config.json` の次の設定を明示的に使います。
+
+```json
+{
+  "publish": {
+    "githubPages": {
+      "enabled": true,
+      "presentationScript": {
+        "enabled": true
+      }
+    }
+  }
+}
+```
+
+規則:
+
+- `presentation-script.md` を作成・編集しただけでは公開設定を変更しない
+- GitHub Pages自体が有効でも、原稿公開を自動的に有効とみなさない
+- ユーザーが原稿の公開を明示的に求めた場合だけ `presentationScript.enabled` を変更する
+- 公開が有効な場合、Pagesルートの `presentation-script.md` として公開される
+- partial script / complete scriptの区別と公開可否を混同しない
+- publish/output設定の変更を、原稿内容の編集へ付随する変更として勝手に行わない
+
 ## 1. sourceとidentity
 
 対応付けにページ番号を使わず、`slides.md` のstable `key`を使います。
