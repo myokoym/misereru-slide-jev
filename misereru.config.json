@@ -15,7 +15,10 @@
   },
   "publish": {
     "githubPages": {
-      "enabled": true
+      "enabled": true,
+      "presentationScript": {
+        "enabled": true
+      }
     }
   }
 }
