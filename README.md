@@ -3,12 +3,12 @@
 TypeSafe AI の **Jev / System One Models** を継続的に調査し、Markdownスライドとして整理するrepositoryです。
 
 - [`slides.md`](slides.md): 人に見せるための要約・スライド正本
-- [`presentation-script.md`](presentation-script.md): stable `key` で各slideに対応する発表原稿
+- [`presentation-script.md`](presentation-script.md): stable `key` で各slideに対応する発表原稿の正本
 - [`research.md`](research.md): 出典、第三者検証、留保、更新履歴を残す調査台帳
 - [`.agents/skills/misereru-slide-writing/SKILL.md`](.agents/skills/misereru-slide-writing/SKILL.md): misereru本体から取り込んだスライド内容設計Skill
 - [`.agents/skills/misereru-presentation-script/SKILL.md`](.agents/skills/misereru-presentation-script/SKILL.md): misereru本体から取り込んだ発表原稿Skill
 - 公開スライド: https://myokoym.github.io/misereru-slide-jev/
-- 公開発表原稿: https://myokoym.github.io/misereru-slide-jev/presentation-script.md
+- 公開発表原稿: https://myokoym.github.io/misereru-slide-jev/presentation-script.html
 
 ## 調査方針
 
@@ -61,6 +61,8 @@ GitHub Pages
 https://myokoym.github.io/misereru-slide-jev/
 ```
 
-`presentation-script.md` の変更もGitHub Actionsのbuild対象です。このrepositoryでは `publish.githubPages.presentationScript.enabled` を有効にしているため、build時に `dist/site/presentation-script.md` へコピーされ、GitHub Pagesから直接参照できます。
+`presentation-script.md` の変更もGitHub Actionsのbuild対象です。このrepositoryでは `publish.githubPages.presentationScript.enabled` を有効にしているため、正本Markdownを検証した後、閲覧用の `dist/site/presentation-script.html` を生成してGitHub Pagesへ公開します。
+
+公開発表原稿は実際のpresentation順で並び、各entryにslide番号・見出し・Narrationを表示し、対応するスライドへ戻るリンクを持ちます。raw `presentation-script.md` はPagesには公開しません。
 
 `misereru.config.json` では GitHub Pages publishing と発表原稿のPages公開を有効にしています。
