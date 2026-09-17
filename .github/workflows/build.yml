@@ -10,6 +10,7 @@ on:
       - 'themes/**'
       - 'marp.config.mjs'
       - 'scripts/build-project.mjs'
+      - 'scripts/render-presentation-script.mjs'
       - 'package.json'
       - '.github/workflows/build.yml'
 
