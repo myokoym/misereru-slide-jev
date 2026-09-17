@@ -1,0 +1,95 @@
+name: Build slide project
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'slides.md'
+      - 'misereru.config.json'
+      - 'themes/**'
+      - 'marp.config.mjs'
+      - 'scripts/build-project.mjs'
+      - 'package.json'
+      - '.github/workflows/build.yml'
+
+concurrency:
+  group: build-slide-project-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      pages_enabled: ${{ steps.publish.outputs.pages_enabled }}
+      pages_path: ${{ steps.publish.outputs.pages_path }}
+      pages_branch: ${{ steps.publish.outputs.pages_branch }}
+      pages_environment: ${{ steps.publish.outputs.pages_environment }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Resolve publish settings
+        id: publish
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const config = JSON.parse(fs.readFileSync('misereru.config.json', 'utf8'));
+          const pages = config.publish?.githubPages;
+          const pagesEnabled = pages === true || pages?.enabled === true;
+          const pagesBranch = typeof pages === 'object' && pages?.branch ? pages.branch : '';
+          const pagesEnvironment = pagesBranch ? 'github-pages-preview' : 'github-pages';
+          const htmlPath = config.outputs?.html?.path ?? 'dist/site/index.html';
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `pages_enabled=${pagesEnabled}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `pages_path=${path.dirname(htmlPath)}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `pages_branch=${pagesBranch}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `pages_environment=${pagesEnvironment}\n`);
+          NODE
+
+      - name: Install Japanese fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build configured outputs
+        run: npm run build:project
+
+      - name: Upload generated outputs
+        uses: actions/upload-artifact@v7
+        with:
+          name: misereru-output
+          path: dist/
+          if-no-files-found: error
+
+      - name: Upload GitHub Pages artifact
+        if: steps.publish.outputs.pages_enabled == 'true' && ((steps.publish.outputs.pages_branch == '' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)) || github.ref_name == steps.publish.outputs.pages_branch)
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: ${{ steps.publish.outputs.pages_path }}
+
+  deploy-pages:
+    needs: build
+    if: needs.build.outputs.pages_enabled == 'true' && ((needs.build.outputs.pages_branch == '' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)) || github.ref_name == needs.build.outputs.pages_branch)
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: ${{ needs.build.outputs.pages_environment }}
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v6
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
