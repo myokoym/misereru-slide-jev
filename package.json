@@ -6,8 +6,8 @@
     "node": ">=22"
   },
   "scripts": {
-    "build:project": "node scripts/build-project.mjs",
-    "build:script-complete": "node scripts/build-project.mjs --require-complete-script"
+    "build:project": "node scripts/build-project.mjs && node scripts/render-presentation-script.mjs",
+    "build:script-complete": "node scripts/build-project.mjs --require-complete-script && node scripts/render-presentation-script.mjs"
   },
   "devDependencies": {
     "@marp-team/marp-cli": "4.5.1"
