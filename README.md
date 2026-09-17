@@ -3,9 +3,10 @@
 TypeSafe AI の **Jev / System One Models** を継続的に調査し、Markdownスライドとして整理するrepositoryです。
 
 - [`slides.md`](slides.md): 人に見せるための要約・スライド正本
+- [`presentation-script.md`](presentation-script.md): stable `key` で各slideに対応する発表原稿
 - [`research.md`](research.md): 出典、第三者検証、留保、更新履歴を残す調査台帳
 - [`.agents/skills/misereru-slide-writing/SKILL.md`](.agents/skills/misereru-slide-writing/SKILL.md): misereru本体から取り込んだスライド内容設計Skill
-- [`.agents/skills/misereru-presentation-script/SKILL.md`](.agents/skills/misereru-presentation-script/SKILL.md): misereru本体から取り込んだ任意の発表原稿Skill
+- [`.agents/skills/misereru-presentation-script/SKILL.md`](.agents/skills/misereru-presentation-script/SKILL.md): misereru本体から取り込んだ発表原稿Skill
 - 公開スライド: https://myokoym.github.io/misereru-slide-jev/
 
 ## 調査方針
@@ -22,9 +23,9 @@ TypeSafe AI の **Jev / System One Models** を継続的に調査し、Markdown�
 `misereru` 本体のAgent Skillを同じパスで取り込んでいます。
 
 - `misereru-slide-writing`: `slides.md` の生成・再構成・推敲。Jev資料は調査・共有を主目的とするため、原則として **Reference mode** を適用する
-- `misereru-presentation-script`: 必要な場合だけ `presentation-script.md` に口頭説明を持たせ、stable `key` でslideと対応させて相互レビューする
+- `misereru-presentation-script`: `presentation-script.md` に口頭説明を持たせ、stable `key` でslideと対応させて相互レビューする
 
-`presentation-script.md` は任意です。原稿を求めていない状態では作成・必須化しません。ファイルが存在する場合は通常buildで構造整合性を検査し、全slide分の原稿を確認する場合だけ `npm run build:script-complete` を使います。
+このrepositoryでは `presentation-script.md` を作成済みで、生成される目次を含む全slideを対象にしたcomplete scriptとして管理します。通常buildでは構造整合性を検査し、全slide分のcoverageを明示的に確認する場合は `npm run build:script-complete` を使います。
 
 ## 現在の調査基準日
 
@@ -59,5 +60,5 @@ GitHub Pages
 https://myokoym.github.io/misereru-slide-jev/
 ```
 
-`presentation-script.md` が存在する場合、その変更もGitHub Actionsのbuild対象です。
+`presentation-script.md` の変更もGitHub Actionsのbuild対象です。
 `misereru.config.json` では GitHub Pages publishing を有効にしています。
