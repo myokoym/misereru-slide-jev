@@ -281,13 +281,11 @@ early access段階では、**現在の仕様を固定値として扱わないこ
 <!-- {"key":"conclusion"} -->
 # 現時点のまとめ
 
-Jevは、生成モデルの代替というより **狭い意味判断をcodeへ返すための専用モデル** と見るのが適切です。
+- Jevは、生成ではなく **狭い意味判断をcodeへ返す専用モデル**
+- 低単価・数百ms級で、routing・ranking・guardrail・agent内部判断と相性がよい
+- 型付き出力でも意味的な誤判定は残るため、`confidence` とfallback設計が必要
+- early accessのため、version・価格・SLA・accuracy / calibrationは継続確認が必要
 
-- 低単価・数百ms級という特性は、routing・ranking・guardrail・agent内部判断と相性がよい
-- 型付き出力は扱いやすいが、意味的な誤判定は残るためconfidenceやfallback設計が必要
-- 公開比較では常に最高精度ではなく、速度・費用・必要精度のトレードオフで評価すべき
-- early accessのため、version・価格・SLA・独立したaccuracy / calibration検証は継続確認が必要
-
-**「Code calculates. Jev judges.」を成立させられる狭い判断ほど、Jevを試す価値がある**というのが現時点の整理です。
+**Code calculates. Jev judges.** が成立する狭い判断ほど、Jevの適合度は高いと考えられます。
 
 根拠・未確認事項・更新履歴: [`research.md`](research.md)
