@@ -1,6 +1,6 @@
 # Jev 継続調査ノート
 
-最終更新: 2026-09-17
+最終更新: 2026-09-18
 
 このファイルは、TypeSafe AI の **Jev / System One Models** を継続的に調査するための根拠メモです。
 `slides.md` は見せるための要約、ここは出典・留保・第三者検証まで残す調査台帳として扱います。
@@ -13,6 +13,7 @@
 - 価格、モデルバージョン、early access、rate limit は変化しやすいため日付付きで扱う。
 - 第三者検証は、サンプル数・地域・ネットワーク・比較条件まで確認する。
 - 日本語で有用な実測記事が出た場合は優先的に追記する。
+- 「既存LLMではできない」といった差別化主張は、同等interfaceをLLMで構成した場合も含めて比較する。
 
 ## 1. Jevとは何か
 
@@ -69,31 +70,37 @@ Python SDK と JavaScript SDK が公開されており、Python SDK は `jev-lat
 
 ### 価格
 
-2026-09-17時点で、公式サイトは **入力 $42 / 10億 tokens = $0.042 / 100万 input tokens** と表示しています。
-第三者記事でも同価格と output 無料が確認されています。
+2026-09-18時点で、公式サイトは **入力 $42 / 10億 tokens = $0.042 / 100万 input tokens** と表示しています。
+公式発表では **output tokensは無料** と明記されています。
 
 一次情報:
 - https://typesafe.ai/
+- https://typesafe.ai/blog/introducing-system-one-models-and-jev
 
 日本語確認:
 - https://dev.classmethod.jp/articles/jev-for-llm-model-routing/
 
 ### レイテンシ
 
-TypeSafe はおおむね **70〜500ms** のレンジを掲げていますが、これはサービス地点・入力・質問数・ネットワーク条件に依存します。
+TypeSafe は **70〜500ms** のend-to-end response timeを掲げています。ただし公式発表は、公開evalの多くが **サービス拠点に近い米国西海岸のラップトップから実行されている** と明記しています。したがって、ネットワーク距離を含めた利用地点の差を分離して見る必要があります。
 
 第三者実測では条件により幅があります。
 
 - DevelopersIO（2026-09-17）: 4種類の分類を各10回、計40回。中央値 **0.643〜0.674秒**。
 - Empryo（2026-09-16）: 102件のAPI障害分類で中央値 **273ms**。
 - Aera（2026-09-17）: 248回の live call で中央値 **226ms**、p95 **497ms**、p99 **794ms**。
+- Zennの五目並べ検証（2026-09-17）: 日本からの対局ログでは25手の多くが **484〜603ms程度**、1手は **1243ms**。記事では平均約500msと整理している。
 
-したがって、現時点では「数百ms級」は複数の第三者実測で支持される一方、公式の70〜500msを常に満たすとは扱わない方がよいです。
+したがって、現時点では「数百ms級」は複数の第三者実測で支持される一方、**公式の100ms級と、日本からの実効レイテンシを同一視しない**方がよいです。
+
+一次情報:
+- https://typesafe.ai/blog/introducing-system-one-models-and-jev
 
 第三者:
 - https://dev.classmethod.jp/articles/jev-for-llm-model-routing/
 - https://empryo.com/blog/jev-and-the-harness
 - https://aerabrowser.com/news/agent-memory-doesnt-need-a-generator-typesafes-jev-vs-llm-on-400-real-tasks
+- https://zenn.dev/mizchi/articles/jev-plays-gomoku
 
 ## 4. 精度はどう見るべきか
 
@@ -101,14 +108,17 @@ Jevの価値は「最も高精度なモデル」というより、**狭い意味
 
 DevelopersIOが整理した公開値では、TypeSafe自身のworkflow evalで Jev は 76.0% とされ、比較対象の一部LLMとほぼ同水準です。一方、Everyによる第三者検証では Jev 67.8%、最良比較対象 74.1% と差が出ています。
 
+TypeSafe自身もworkflow evalの193.6x高速・444.6x低コストという値について、**real-world gainsの高い側にあると予想する**旨を留保しています。
+
 つまり、少なくとも初期段階では、速度・費用の優位と、タスクごとの精度評価を分けて考える必要があります。
 
 第三者:
 - https://dev.classmethod.jp/articles/jev-for-llm-model-routing/
 - https://every.to/also-true-for-humans/mini-vibe-check-typesafe-s-jev-judged-everything-i-ve-written-in-0-7-seconds
 
-公式eval:
+公式eval・説明:
 - https://evals.typesafe.ai/
+- https://typesafe.ai/blog/introducing-system-one-models-and-jev
 
 ## 5. 「hallucinateしない」の意味
 
@@ -155,12 +165,14 @@ TypeSafe公式ドキュメントには `Jev 1.13 jaggedness` という既知の�
 - skill / tool候補の選択
 - 検索結果のreranking
 - ブラウザエージェントの次アクション選択
+- ゲームやインタラクティブアプリ内の低遅延な意味判断
 
 公式 cookbook はかなり充実しており、Jevを「生成モデルの代替」ではなく、生成モデルの前後や内部に置く判断プリミティブとして使う例が多いです。
 
 一次情報:
 - https://docs.typesafe.ai/llms.txt
 - https://docs.typesafe.ai/concepts/use-case-map
+- https://typesafe.ai/blog/introducing-system-one-models-and-jev
 
 第三者実装例:
 - https://github.com/browser-use/jev-ultrafast
@@ -177,19 +189,140 @@ Google Flightsの限定タスクについて、同一モデル・同一設定で
 - https://github.com/browser-use/jev-ultrafast
 - https://github.com/browser-use/jev-ultrafast/blob/main/docs/performance.md
 
-## 9. 会社・公開状況
+## 9. リアルタイム・ゲーム用途
 
-TypeSafe AI は2026年9月にステルス状態から表に出て、Jevを early access として公開しました。
-DCVCは **4,000万ドルのseed round** を主導したと発表しています。
+### TypeSafe公式: Real-time applications
 
-TypeSafe側の発表ページは2026-09-14、DCVC側の対外発表は2026-09-15であり、資料では日付を混同しないようにします。
+TypeSafeは公式発表のuse caseとして **Real-time applications** を独立して挙げ、「100ms speeds means you can use AI in your applications where UX is critical」と説明しています。
+
+これはJevの用途を業務ルーティングやagent内部判断だけに限定せず、**人が操作するインタラクティブシステムへ意味判断を差し込む**ことを狙っていると読めます。
+
+一次情報:
+- https://typesafe.ai/blog/introducing-system-one-models-and-jev
+
+### TypeSafe公式: DOOM
+
+公式DOOMデモでは、Jevへ **10 queries / second**、つまり約100ms間隔で判断を要求しています。TypeSafeは、この頻度でも費用は約 **$7/hour** と説明しています。
+
+重要な留保:
+
+- Jevが画面画像を直接見ているわけではない。
+- 入力は、テキストを含む **structured game state**。
+- TypeSafe自身が「non-AI Doom bot could play better」と認めている。
+- 狙いは専用botの最高性能ではなく、異なるgame state表現へ反応し、instruction followingを伴うリアルタイム判断を示すこと。
+
+したがって、このデモを「JevはゲームAIとして既存専用botより優秀」と解釈してはいけません。
+
+一次情報:
+- https://typesafe.ai/blog/introducing-system-one-models-and-jev
+
+### TypeSafe公式: Wikiracing
+
+公式は別のgame-like demoとしてWikiracingも示しています。各stepで数百〜数千リンクから次候補を選ぶタスクです。
+
+JevのChoiceはcardinality最大255まで対応し、それを超える高cardinalityでは、独立score → explicit choiceの2段構成を使うと公式は説明しています。
+
+この例は「リアルタイム操作」というより、**高cardinality選択を繰り返す探索・ゲーム的タスク**での適用例です。
+
+一次情報:
+- https://typesafe.ai/blog/introducing-system-one-models-and-jev
+
+### 第三者: Mario
+
+Zennの検証では、公開されたMarioハーネスを使ってJevと複数LLMを比較しています。
+
+確認できる点:
+
+- 検証者環境では、公開デモより **約3倍程度のlatency** があった。
+- その環境内ではJevが比較対象LLMより良いプレイ結果だった。
+- ただし比較可能だったLLMは、logit/logprobsを取得できる旧世代の非推論モデルが中心。
+- したがって「Jevが最新LLMよりゲーム性能で優れている」とは結論できない。
+
+第三者:
+- https://zenn.dev/nwn/articles/824026c76116e0
+
+### 第三者: 五目並べ
+
+Zennの五目並べ実装は、15x15盤面のgame stateと、**現在合法な手だけ**をChoice候補へ渡しています。
+
+25手のログでは、多くのAPI呼び出しが **484〜603ms程度**、1回は1243msで、対局全体は13.913秒でした。記事では平均約500msと整理されています。
+
+この実装はJevの設計上重要な示唆があります。
+
+- 合法手生成やゲームルール判定はcode側へ残す。
+- Jevには、合法候補の中の「意味的な選択」を任せる。
+- choice候補を絞るハーネス設計が性能・精度の一部になる。
+
+第三者:
+- https://zenn.dev/mizchi/articles/jev-plays-gomoku
+- https://github.com/mizchi/jev-gomoku
+
+### 第三者: Snake
+
+個人実装として、Snakeのgame stateから移動方向をChoiceで選ばせる例も公開されています。
+
+これはbenchmarkとしては扱いませんが、DOOM、Mario、五目並べとは別系統の実装でも、**state → 限定行動候補 → Choice**という構成が使われている確認材料になります。
+
+第三者:
+- https://note.com/tomonr1984/n/n057b04c37fda
+
+### ゲーム設計への含意
+
+公開例と日本からの実測を合わせると、Jevを60Hz/120Hzの物理・入力・描画ループへ直接置くより、**低頻度の意味判断層**として置く方が現実的です。
+
+例:
+
+```text
+60Hz / 120Hz code loop
+  ├─ input
+  ├─ physics
+  ├─ collision
+  ├─ animation
+  └─ deterministic rules
+
+数Hz〜10Hz程度のdecision layer
+  └─ Jev
+      ├─ attack / retreat / wait
+      ├─ target selection
+      ├─ strategy state
+      └─ dialogue / negotiation / escalation
+```
+
+ここでの「数Hz〜10Hz」は、公式DOOMの10Hzと日本から約0.5秒/判断の第三者実測から導く**設計上の目安**であり、TypeSafeが製品仕様として保証する頻度ではありません。
+
+### Jevだけが可能なのか
+
+この点は公平に比較する必要があります。
+
+Zennの検証では、LLMでも回答候補を短いtoken IDへ対応させ、最初の1tokenのlogitを比較し、複数質問をbatch推論することで、自由文JSON生成より大幅に高速化できることを示しています。Gemma 3 270Mを用いたその検証では、JSON全文生成に対して77倍高速だったと報告されています。
+
+したがって、Jevのリアルタイム価値を評価するときは、
+
+- Jev
+- 普通のLLMにJSONを全文生成させる方式
+- LLMのlogit/logprobsを直接使う方式
+- rule / utility AI / behavior tree / 専用model
+
+を分けて比較する必要があります。
+
+現時点でJevの特徴は、**型付き確率判断・並列質問・低単価を専用APIとして一体化していること**であり、「同様の判断が他方式では不可能」ということではありません。
+
+第三者:
+- https://zenn.dev/nwn/articles/824026c76116e0
+
+## 10. 会社・公開状況
+
+TypeSafe AI は **2026年9月15日** に公式ブログでJevをearly accessとして発表しました。
+DCVCも同日の記事で、**4,000万ドルのSeries Seed** を主導したと発表しています。
+
+以前の資料にあった「TypeSafe側の発表は2026-09-14」という記載は誤りだったため、2026-09-18の再調査で訂正しました。
 
 一次情報:
 - https://typesafe.ai/blog/introducing-system-one-models-and-jev
 - https://www.dcvc.com/news-insights/typesafe-emerges-from-stealth-with-a-new-way-of-doing-ai/
 - https://typesafe.ai/team
 
-## 10. 現時点の評価
+## 11. 現時点の評価
 
 ### 強い点
 
@@ -198,6 +331,7 @@ TypeSafe側の発表ページは2026-09-14、DCVC側の対外発表は2026-09-15
 - 入力単価が非常に低く、output課金を意識せず複数の判断をfan-outしやすい。
 - 確率分布とconfidenceをコードの制御に直接組み込める。
 - narrow / atomic な意味判断を大量に挟むagent harnessと相性がよい。
+- 公式DOOMや複数の第三者ゲーム実装から、interactive systemのdecision layerとしての用途が実際に試されている。
 
 ### 未確定・注意点
 
@@ -206,8 +340,11 @@ TypeSafe側の発表ページは2026-09-14、DCVC側の対外発表は2026-09-15
 - 第三者精度検証はまだ少ない。
 - 数学・日付・長いcontext・敵対的入力など、LLMとは違う形のjaggednessがある。
 - 生成能力がないため、Jev単独でagent全体を置換するものではない。
+- レイテンシは地域差があり、日本から公式DOOMと同じ10Hzを前提にはできない。
+- game用途でも、60Hz/120Hzのengine loopを置き換えるのではなく、意味判断の層として設計する必要がある。
+- logit/logprobsを使うLLMや専用AIでも類似の構成は可能で、Jevだけの独占的用途ではない。
 
-## 11. 継続追跡する項目
+## 12. 継続追跡する項目
 
 1. `jev-latest` が指すモデルversionと変更履歴
 2. 公式 jaggedness の更新
@@ -215,12 +352,14 @@ TypeSafe側の発表ページは2026-09-14、DCVC側の対外発表は2026-09-15
 4. 日本・アジア圏からのlatency実測
 5. 独立したaccuracy / calibration評価
 6. browser / coding agent / RAG / moderationでの実運用例
-7. OpenAI / Anthropic / Google等のstructured decision系との比較
-8. Vercel AI Gateway等、外部基盤経由での利用性
-9. production SLA、データ保持、privacy、enterprise条件
-10. Jev向けのprompt/question設計パターン
+7. real-time / game / interactive用途の公開harnessと再現実測
+8. OpenAI / Anthropic / Google等のstructured decision系との比較
+9. LLM logit/logprobs利用との速度・精度・API usability比較
+10. Vercel AI Gateway等、外部基盤経由での利用性
+11. production SLA、データ保持、privacy、enterprise条件
+12. Jev向けのprompt/question設計パターン
 
-## 12. 主要出典
+## 13. 主要出典
 
 ### 一次情報
 
@@ -236,6 +375,9 @@ TypeSafe側の発表ページは2026-09-14、DCVC側の対外発表は2026-09-15
 ### 日本語・第三者
 
 - DevelopersIO（実測あり）: https://dev.classmethod.jp/articles/jev-for-llm-model-routing/
+- Zenn（Jev / LLM比較、DOOM・Mario）: https://zenn.dev/nwn/articles/824026c76116e0
+- Zenn（五目並べ、国内レイテンシ実測）: https://zenn.dev/mizchi/articles/jev-plays-gomoku
+- note（Snake実装）: https://note.com/tomonr1984/n/n057b04c37fda
 - VisionHub（日本語整理）: https://visionhub.jp/presentations/day_slides/day_slide_2026_09_14.html
 
 ### 第三者検証・実装
@@ -244,3 +386,4 @@ TypeSafe側の発表ページは2026-09-14、DCVC側の対外発表は2026-09-15
 - Empryo: https://empryo.com/blog/jev-and-the-harness
 - Aera: https://aerabrowser.com/news/agent-memory-doesnt-need-a-generator-typesafes-jev-vs-llm-on-400-real-tasks
 - browser-use/jev-ultrafast: https://github.com/browser-use/jev-ultrafast
+- mizchi/jev-gomoku: https://github.com/mizchi/jev-gomoku
