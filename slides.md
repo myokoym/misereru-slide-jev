@@ -7,21 +7,6 @@ TypeSafe AIの「生成しない判断モデル」は、どこまで実用的か
 
 ---
 
-<!-- {"key":"summary"} -->
-# Jevは「生成」ではなく、型付き判断を高速・低コストで挟むモデル
-
-Jevは、LLMの小型版というより **意味を理解する `if / switch` をソフトウェアへ組み込むためのモデル** と捉えると分かりやすいです。
-
-- 自由文ではなく **Choice / Score / Noul** の型付き判断を返す
-- 数百ms級・低単価を前提に、狭い判断を多数呼ぶ設計を狙う
-- 強みは最高精度そのものより、**構造化・確率・confidenceをコードから直接扱えること**
-- 型の破損は避けやすい一方、意味的な誤判定は残る
-- 2026年9月時点ではearly accessで、独立検証はまだ少ない
-
-詳細な根拠と更新履歴は [`research.md`](research.md) に分離しています。
-
----
-
 <!-- {"key":"section-what","type":"section"} -->
 # 1. Jevは何を置き換えるのか
 
@@ -47,21 +32,33 @@ Jevは、LLMの小型版というより **意味を理解する `if / switch` �
 ---
 
 <!-- {"key":"design"} -->
-# TypeSafeは「複雑な1問」より、atomicな判断への分解を推奨する
+# 複雑な判断は、atomicな質問へ分解する
 
-たとえば「この問い合わせをどう処理するか」を1問に詰めず、判断を分けます。
+TypeSafeは、複数の意味判断を1問へ詰め込むより、狭い質問へ分ける設計を推奨しています。
 
-| 判断 | 担当 |
+| 判断 | Jevのprimitive |
 | --- | --- |
 | どの部署へ振るか | Choice |
 | 緊急性があるか | Noul |
 | 顧客の不満度 | Score |
-| 自動処理してよいか | confidence + code |
-| 日付・件数・閾値計算 | code |
-
-中心にある役割分担は **Code calculates. Jev judges.** です。意味判断はJev、正確に計算できる処理はコードへ残します。
+| 自動処理してよいか | confidenceを使ってcode側で分岐 |
 
 出典: [Quick Start](https://docs.typesafe.ai/introduction/quickstart)
+
+---
+
+<!-- {"key":"design-code"} -->
+# 意味判断はJev、正確に計算できる処理はcodeへ残す
+
+**Code calculates. Jev judges.** が基本的な役割分担です。
+
+- Jev: 分類、適合度、緊急性、曖昧な意味判断
+- code: 日付比較、件数、閾値、算術、決定済みルール
+- system: `confidence` や確率を使い、自動実行・追加確認・エスカレーションを決める
+
+Jevへ「全部考えさせる」のではなく、**モデルが必要な判断だけを切り出す**設計になります。
+
+出典: [Quick Start](https://docs.typesafe.ai/introduction/quickstart) / [Confidence](https://docs.typesafe.ai/confidence)
 
 ---
 
@@ -86,7 +83,7 @@ Jevは、LLMの小型版というより **意味を理解する `if / switch` �
 ---
 
 <!-- {"key":"latency"} -->
-# 第三者実測でも「数百ms級」は確認されているが、公式レンジを常に満たすとは限らない
+# 第三者実測でも数百ms級の例はあるが、公式レンジを常に満たすとは限らない
 
 TypeSafeはおおむね **70〜500ms** のレンジを掲げています。第三者実測には条件差があります。
 
@@ -96,7 +93,7 @@ TypeSafeはおおむね **70〜500ms** のレンジを掲げています。第�
 | Empryo | 102 error cases | 中央値 273ms |
 | Aera | 248 live calls | 中央値 226ms / p95 497ms |
 
-したがって現時点では、**従来LLMより短い判断レイテンシの例は複数ある**一方、70〜500msを常時保証する根拠にはしません。
+現時点では、短い判断レイテンシの例は複数あります。ただし、70〜500msを常時保証する根拠にはしません。
 
 出典: [DevelopersIO](https://dev.classmethod.jp/articles/jev-for-llm-model-routing/) / [Empryo](https://empryo.com/blog/jev-and-the-harness) / [Aera](https://aerabrowser.com/news/agent-memory-doesnt-need-a-generator-typesafes-jev-vs-llm-on-400-real-tasks)
 
@@ -120,7 +117,7 @@ Jevは自由文を生成せず、事前定義した型・候補空間から結�
 
 一方で、**定義済み候補の中から誤ったものを選ぶことはあります**。
 
-したがって実務上は、**型の整合性と意味的正答率を別の品質指標として扱う**必要があります。
+したがって、型の整合性と意味的正答率は別の品質指標として扱います。
 
 出典: [TypeSafe発表](https://typesafe.ai/blog/introducing-system-one-models-and-jev) / [Confidence](https://docs.typesafe.ai/confidence)
 
@@ -136,9 +133,7 @@ DevelopersIOが整理した公開値では、次の差があります。
 | TypeSafe workflow eval | 76.0% | 一部LLMと同水準 |
 | Everyの第三者検証 | 67.8% | 最良比較対象 74.1% |
 
-このため、現時点の評価軸は「最も高精度か」だけでは不十分です。
-
-**必要精度を満たす範囲で、判断をどれだけ速く・安く・構造的に差し込めるか**を、用途ごとに測る必要があります。
+現時点では「最も高精度か」だけで評価するより、**必要精度を満たす範囲で、判断をどれだけ速く・安く差し込めるか**を用途ごとに測る必要があります。
 
 出典: [DevelopersIO](https://dev.classmethod.jp/articles/jev-for-llm-model-routing/) / [Workflow evals](https://evals.typesafe.ai/)
 
@@ -147,7 +142,7 @@ DevelopersIOが整理した公開値では、次の差があります。
 <!-- {"key":"confidence"} -->
 # confidenceは自動実行・再確認・エスカレーションの分岐に使える
 
-Choice / Score は確率分布と `confidence` を返します。たとえばシステム側で、次のような制御を明示できます。
+Choice / Score は確率分布と `confidence` を返します。
 
 | confidence | 処理例 |
 | --- | --- |
@@ -169,9 +164,9 @@ Choice / Score は確率分布と `confidence` を返します。たとえばシ
 ---
 
 <!-- {"key":"limits"} -->
-# 計算・日付比較・長すぎるstateはコード側へ寄せる
+# 計算・日付比較・長すぎるstateはcode側へ寄せる
 
-TypeSafeは `Jev 1.13 jaggedness` として既知の弱点を公開しています。現時点の調査で確認している注意点は次のとおりです。
+TypeSafeは `Jev 1.13 jaggedness` として既知の弱点を公開しています。現時点の調査で確認している注意点です。
 
 - 曖昧な意図補完より、指示を文字通りに読みやすい
 - 計数・算術を任せない
@@ -187,30 +182,40 @@ TypeSafeは `Jev 1.13 jaggedness` として既知の弱点を公開していま�
 ---
 
 <!-- {"key":"section-usecases","type":"section"} -->
-# 5. Jevが効きやすいのは「限定された回答空間を、コードがすぐ使う」場所
+# 5. Jevが効きやすいのは、限定した回答空間をcodeがすぐ使う場所
 
 生成モデル全体の置換ではなく、その前後・内部へ差し込む
 
 ---
 
-<!-- {"key":"usecases"} -->
-# routing・ranking・guardrailのような狭い意味判断と相性がよい
+<!-- {"key":"usecases-routing"} -->
+# routing・制御・分類では、判断結果をそのまま処理へつなげやすい
 
-現時点で公式cookbookや第三者実装から確認できる主な用途です。
+公式cookbookや第三者実装で確認できる用途です。
 
 - LLM / agent のモデルルーティング
 - tool / skill候補の選択
 - retry / halt の判定
-- RAG passage の採用・棄却
-- citationの支持関係チェック
 - guardrail / moderation
-- 検索結果のreranking
 - 問い合わせ・障害・案件の分類
-- ブラウザエージェントの次アクション選択
 
-共通条件は、**候補や評価軸を事前に限定でき、返った判断をソフトウェアが直接使えること**です。
+共通するのは、**候補や評価軸を事前に限定しやすいこと**です。
 
 出典: [TypeSafe Cookbooks / docs index](https://docs.typesafe.ai/llms.txt)
+
+---
+
+<!-- {"key":"usecases-retrieval"} -->
+# retrieval・agent内部の評価にも、狭い意味判断として差し込める
+
+- RAG passage の採用・棄却
+- citationの支持関係チェック
+- 検索結果のreranking
+- ブラウザエージェントの次アクション選択
+
+この種の処理では、Jevが文章を生成する必要はありません。**返った判断を次のcodeやagent stepが直接使えること**が適合条件です。
+
+出典: [TypeSafe Cookbooks / docs index](https://docs.typesafe.ai/llms.txt) / [browser-use/jev-ultrafast](https://github.com/browser-use/jev-ultrafast)
 
 ---
 
@@ -219,13 +224,9 @@ TypeSafeは `Jev 1.13 jaggedness` として既知の弱点を公開していま�
 
 公開実装 `browser-use/jev-ultrafast` は、ブラウザ操作の判断部分へJevを組み込んでいます。
 
-Google Flightsの限定比較では、同一モデル・同一設定で
+Google Flightsの限定比較では、同一モデル・同一設定で **中央値 9.450秒 → 7.092秒（25%短縮）** と報告しています。
 
-**中央値 9.450秒 → 7.092秒（25%短縮）**
-
-と報告しています。
-
-ただし、比較は **1タスク・3ペア** の小規模検証です。リポジトリ自身も一般的な信頼性benchmarkではないと明記しているため、一般化はしません。
+ただし比較は **1タスク・3ペア** の小規模検証です。リポジトリ自身も一般的な信頼性benchmarkではないと明記しているため、一般化はしません。
 
 出典: [GitHub](https://github.com/browser-use/jev-ultrafast) / [performance.md](https://github.com/browser-use/jev-ultrafast/blob/main/docs/performance.md)
 
@@ -234,13 +235,13 @@ Google Flightsの限定比較では、同一モデル・同一設定で
 <!-- {"key":"status"} -->
 # 2026年9月時点ではearly accessで、production標準部品とみなすには検証が足りない
 
-確認できている公開状況は次のとおりです。
+確認できている公開状況です。
 
 - TypeSafeは2026年9月にステルス状態からJevを公開
 - DCVC主導で **$40M seed round**
 - SDK / API / cookbooks は既に公開
 - 第三者のlatency実測は複数ある
-- 一方、独立したaccuracy / calibration評価はまだ少ない
+- 独立したaccuracy / calibration評価はまだ少ない
 - version、rate limit、価格、SLA、privacy条件は継続確認が必要
 
 現時点では、**新しい判断プリミティブとして有望かを検証する段階**と整理します。
@@ -249,38 +250,44 @@ Google Flightsの限定比較では、同一モデル・同一設定で
 
 ---
 
-<!-- {"key":"watch"} -->
-# 継続調査では「変わりやすい仕様」と「独立検証」を優先する
+<!-- {"key":"watch-spec"} -->
+# 継続調査: まず変わりやすい仕様を追う
 
-1. `jev-latest` が指すmodel versionと変更履歴
-2. 公式jaggedness / changelog
-3. price / rate limit / access条件
-4. 日本・アジアからのlatency
-5. 独立したaccuracy / calibration評価
-6. coding agent / browser / RAGでの実運用例
-7. OpenAI・Anthropic・Google等のstructured decision系との比較
-8. production SLA / privacy / data retention
+- `jev-latest` が指すmodel versionと変更履歴
+- 公式jaggedness / changelog
+- price / rate limit / access条件
+- production SLA / privacy / data retention
 
-調査ログ・未確認事項・出典は [`research.md`](research.md) に蓄積し、重要な差分だけこのスライドへ反映します。
+early access段階では、**現在の仕様を固定値として扱わないこと**が重要です。
+
+詳細な変更履歴は [`research.md`](research.md) に蓄積します。
 
 ---
 
-<!-- {"key":"sources"} -->
-# 主要出典
+<!-- {"key":"watch-evidence"} -->
+# 継続調査: 独立検証と実運用例を増やす
 
-### 一次情報
+- 日本・アジアからのlatency
+- 独立したaccuracy / calibration評価
+- coding agent / browser / RAGでの実運用例
+- OpenAI・Anthropic・Google等のstructured decision系との比較
 
-- [TypeSafe AI](https://typesafe.ai/)
-- [Introducing System One Models and Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev)
-- [TypeSafe Documentation](https://docs.typesafe.ai/introduction)
-- [Documentation index](https://docs.typesafe.ai/llms.txt)
-- [Workflow evals](https://evals.typesafe.ai/)
-
-### 第三者検証・実装
-
-- [DevelopersIO: Jevモデルルーティング実測](https://dev.classmethod.jp/articles/jev-for-llm-model-routing/)
-- [Every: hands-on test](https://every.to/also-true-for-humans/mini-vibe-check-typesafe-s-jev-judged-everything-i-ve-written-in-0-7-seconds)
-- [Empryo: 102 error cases](https://empryo.com/blog/jev-and-the-harness)
-- [browser-use/jev-ultrafast](https://github.com/browser-use/jev-ultrafast)
+ベンダー自身の性能主張と、第三者の再現・実測は引き続き分けて記録します。
 
 調査台帳: [`research.md`](research.md)
+
+---
+
+<!-- {"key":"conclusion"} -->
+# 現時点のまとめ
+
+Jevは、生成モデルの代替というより **狭い意味判断をcodeへ返すための専用モデル** と見るのが適切です。
+
+- 低単価・数百ms級という特性は、routing・ranking・guardrail・agent内部判断と相性がよい
+- 型付き出力は扱いやすいが、意味的な誤判定は残るためconfidenceやfallback設計が必要
+- 公開比較では常に最高精度ではなく、速度・費用・必要精度のトレードオフで評価すべき
+- early accessのため、version・価格・SLA・独立したaccuracy / calibration検証は継続確認が必要
+
+**「Code calculates. Jev judges.」を成立させられる狭い判断ほど、Jevを試す価値がある**というのが現時点の整理です。
+
+根拠・未確認事項・更新履歴: [`research.md`](research.md)
