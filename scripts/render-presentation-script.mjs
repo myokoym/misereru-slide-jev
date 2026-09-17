@@ -6,6 +6,7 @@ const configPath = resolve(root, process.env.MISERERU_CONFIG ?? 'misereru.config
 const config = JSON.parse(await readFile(configPath, 'utf8'));
 const pagesEnabled = featureEnabled(config.publish?.githubPages);
 const scriptPublishingEnabled = featureEnabled(config.publish?.githubPages?.presentationScript);
+const articlePublished = featureEnabled(config.publish?.githubPages?.article);
 
 if (!scriptPublishingEnabled) {
   process.exit(0);
@@ -43,6 +44,7 @@ const rendered = renderHtml({
   presentationTitle,
   slideDocument,
   orderedEntries,
+  articlePublished,
 });
 
 await mkdir(siteDir, { recursive: true });
@@ -148,7 +150,7 @@ function parsePresentationScript(markdown) {
   return entries;
 }
 
-function renderHtml({ presentationTitle, slideDocument, orderedEntries }) {
+function renderHtml({ presentationTitle, slideDocument, orderedEntries, articlePublished }) {
   const toc = orderedEntries
     .map(
       (entry) =>
@@ -171,6 +173,10 @@ function renderHtml({ presentationTitle, slideDocument, orderedEntries }) {
 </section>`
     )
     .join('\n');
+
+  const articleLink = articlePublished
+    ? '<a href="./article.html">記事</a>'
+    : '';
 
   return `<!doctype html>
 <html lang="ja">
@@ -197,12 +203,17 @@ function renderHtml({ presentationTitle, slideDocument, orderedEntries }) {
     header {
       margin-bottom: 40px;
     }
+    .related-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
     h1 {
       margin: 12px 0 8px;
       font-size: clamp(2rem, 5vw, 3rem);
       line-height: 1.25;
     }
-    .back-link,
+    .related-links a,
     .entry-meta a,
     .toc a {
       color: LinkText;
@@ -254,7 +265,10 @@ function renderHtml({ presentationTitle, slideDocument, orderedEntries }) {
 <body>
   <main>
     <header>
-      <a class="back-link" href="./${escapeHtml(slideDocument)}">← スライドへ戻る</a>
+      <nav class="related-links" aria-label="関連資料">
+        <a href="./${escapeHtml(slideDocument)}">← スライドへ戻る</a>
+        ${articleLink}
+      </nav>
       <h1>${escapeHtml(presentationTitle)} — 発表原稿</h1>
       <p>各項目は実際のスライド順に並んでいます。</p>
     </header>
