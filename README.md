@@ -4,6 +4,7 @@ TypeSafe AI の **Jev / System One Models** を継続的に調査し、Markdown�
 
 - [`slides.md`](slides.md): 人に見せるための要約・スライド正本
 - [`research.md`](research.md): 出典、第三者検証、留保、更新履歴を残す調査台帳
+- 公開スライド: https://myokoym.github.io/misereru-slide-jev/
 
 ## 調査方針
 
@@ -28,10 +29,10 @@ TypeSafe AI の **Jev / System One Models** を継続的に調査し、Markdown�
 - OpenAI / Anthropic / Google等の既存モデルとの役割分担
 - production利用時のSLA・privacy・data retention
 
-## スライド生成
+## スライド生成・公開
 
 このrepositoryは `misereru` テンプレートから作成されています。
-通常編集するのは `slides.md` で、GitHub ActionsがHTMLを生成します。
+通常編集するのは `slides.md` で、GitHub ActionsがHTMLを生成し、GitHub Pagesへ公開します。
 
 ```text
 slides.md
@@ -40,7 +41,11 @@ GitHub Actions
   ↓
 Marp
   ↓
-HTML
+dist/site/index.html
+  ↓
+GitHub Pages
+  ↓
+https://myokoym.github.io/misereru-slide-jev/
 ```
 
-公開設定は別途明示的に有効化しない限り行いません。
+`misereru.config.json` では GitHub Pages publishing を有効にしています。
