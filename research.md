@@ -169,10 +169,24 @@ TypeSafe公式ドキュメントには `Jev 1.13 jaggedness` という既知の�
 
 公式 cookbook はかなり充実しており、Jevを「生成モデルの代替」ではなく、生成モデルの前後や内部に置く判断プリミティブとして使う例が多いです。
 
+### 公式cookbookで公開された定量例（2026-09-18確認）
+
+TypeSafe公式ドキュメント索引から、単なる用途例だけでなく定量結果を伴うcookbookが確認できました。これらは**ベンダー自身の例**であり、独立benchmarkではありません。
+
+- **RAG / reranking**: CLERCのlegal query 40件について、BM25で各30 passageを候補化しJevでrerank。公式記載では top-1 accuracy **5% → 18%**、top-10 **38% → 62%**。
+- **parallel questions**: GDPR Wikipedia記事に対する13問を1 callへbatchし、公式記載では個別call比 **12.2x cheaper / 10.0x faster**、answersは不変。
+- **line-by-line semantic search**: GitHub Terms of Serviceの218 line idを1 requestのChoiceで評価し、Noulで「文書内に答えがあるか」も判定。
+- **RAG passage classification / citation check / LLM guardrails**: passageの採否・prompt injection、citation支持関係、入出力のjailbreak/harm判定を、それぞれ閉じた判断問題として実装するcookbookを公式公開。
+
+これらはJevの「狭い判断を大量に差し込む」という設計を具体化する資料として有用ですが、accuracy改善値や速度倍率はTypeSafe自身のharness・datasetでの結果なので、第三者再現を待つ必要があります。
+
 一次情報:
 - https://docs.typesafe.ai/llms.txt
-- https://docs.typesafe.ai/concepts/use-case-map
-- https://typesafe.ai/blog/introducing-system-one-models-and-jev
+- https://docs.typesafe.ai/cookbooks/rerank_typesafe
+- https://docs.typesafe.ai/cookbooks/parallel_questions
+- https://docs.typesafe.ai/cookbooks/classifying_rag_passages
+- https://docs.typesafe.ai/cookbooks/citation_check
+- https://docs.typesafe.ai/cookbooks/llm_guardrails
 
 第三者実装例:
 - https://github.com/browser-use/jev-ultrafast
@@ -322,6 +336,27 @@ DCVCも同日の記事で、**4,000万ドルのSeries Seed** を主導したと�
 - https://www.dcvc.com/news-insights/typesafe-emerges-from-stealth-with-a-new-way-of-doing-ai/
 - https://typesafe.ai/team
 
+## 10.5. Privacy / data retention / production契約条件
+
+2026-09-18にTypeSafe公式Privacy Policy（最終更新 2025-11-19）をAPI利用条件として確認しました。これはJev固有のmodel cardではなく、Playground・API等を含むTypeSafe Services全体のprivacy policyです。
+
+確認できた点:
+
+- API等へ送る prompts / data / instructions / other input を **Input** と定義して収集する。
+- TypeSafeは **InputをAI/MLモデルのtrainingまたはfine-tuningに使用しない** と明記している。
+- Inputを第三者へ開示しない。ただし **service providersへの開示は例外**。
+- Servicesは **米国でhost** され、EEA・UK等から利用する場合も米国へstorage / processingのため移転されると明記。
+- retentionは固定日数ではなく、Services提供やbusiness/commercial purposesに **reasonably necessaryな期間** 保持するとしている。法的保持義務がある場合はさらに長くなりうる。
+- securityについて「reasonable efforts」は記載されるが、電子的な送信・保存の完全なsecurity/privacyは保証しない。
+
+したがって、**「学習に使われない」ことは一次情報で確認できた一方、API Inputの具体的な保持日数、zero-retention option、リージョン選択、Jev向けproduction SLAは公開資料から確認できていない**、という状態です。
+
+また公開Terms of Use（2026-09-14更新）は主としてSite利用規約で、Siteを`as is` / `as available`とし、中断・error-free等を保証していません。これはenterprise/API個別契約のSLA不存在を証明するものではないため、**公開Web上でJev APIのSLAを確認できない**という表現に留めます。
+
+一次情報:
+- https://typesafe.ai/legal/privacy-policy
+- https://typesafe.ai/legal/terms
+
 ## 11. 現時点の評価
 
 ### 強い点
@@ -332,6 +367,7 @@ DCVCも同日の記事で、**4,000万ドルのSeries Seed** を主導したと�
 - 確率分布とconfidenceをコードの制御に直接組み込める。
 - narrow / atomic な意味判断を大量に挟むagent harnessと相性がよい。
 - 公式DOOMや複数の第三者ゲーム実装から、interactive systemのdecision layerとしての用途が実際に試されている。
+- 公式Privacy Policyでは、API等へ送るInputをモデルtraining / fine-tuningに使わないと明記されている。
 
 ### 未確定・注意点
 
@@ -343,6 +379,7 @@ DCVCも同日の記事で、**4,000万ドルのSeries Seed** を主導したと�
 - レイテンシは地域差があり、日本から公式DOOMと同じ10Hzを前提にはできない。
 - game用途でも、60Hz/120Hzのengine loopを置き換えるのではなく、意味判断の層として設計する必要がある。
 - logit/logprobsを使うLLMや専用AIでも類似の構成は可能で、Jevだけの独占的用途ではない。
+- API Inputの具体的な保持日数、zero-retention、リージョン選択、公開SLAは確認できていない。
 
 ## 12. 継続追跡する項目
 
@@ -370,6 +407,8 @@ DCVCも同日の記事で、**4,000万ドルのSeries Seed** を主導したと�
 - Quick Start: https://docs.typesafe.ai/introduction/quickstart
 - Confidence: https://docs.typesafe.ai/confidence
 - Workflow evals: https://evals.typesafe.ai/
+- Privacy Policy: https://typesafe.ai/legal/privacy-policy
+- Terms of Use: https://typesafe.ai/legal/terms
 - DCVC: https://www.dcvc.com/news-insights/typesafe-emerges-from-stealth-with-a-new-way-of-doing-ai/
 
 ### 日本語・第三者
