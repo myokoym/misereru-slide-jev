@@ -4,6 +4,7 @@ TypeSafe AI の **Jev / System One Models** を継続的に調査し、Markdown�
 
 - [`slides.md`](slides.md): 人に見せるための要約・スライド正本
 - [`research.md`](research.md): 出典、第三者検証、留保、更新履歴を残す調査台帳
+- [`.agents/skills/misereru-slide-writing/SKILL.md`](.agents/skills/misereru-slide-writing/SKILL.md): misereru本体から取り込んだスライド内容設計Skill
 - 公開スライド: https://myokoym.github.io/misereru-slide-jev/
 
 ## 調査方針
@@ -14,6 +15,11 @@ TypeSafe AI の **Jev / System One Models** を継続的に調査し、Markdown�
 - 「型として不正な出力をしない」と「意味的に正しい判断」を混同しない
 - 日本語の有用な検証記事があれば優先的に追加する
 - 新情報が出ても、重要度が低いものはスライドへ直接追加せず `research.md` に留める
+
+## Agent Skill
+
+`misereru` 本体の `.agents/skills/misereru-slide-writing/SKILL.md` を上流として、このrepositoryにも同じパスで配置します。
+Jev資料は調査・共有を主目的とするため、原則としてSkillの **Reference mode** を適用します。
 
 ## 現在の調査基準日
 
