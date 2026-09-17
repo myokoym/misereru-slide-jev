@@ -276,9 +276,9 @@ TypeSafeは `Jev 1.13 jaggedness` として既知の弱点を公開していま�
 - 検索結果のreranking
 - ブラウザエージェントの次アクション選択
 
-この種の処理では、Jevが文章を生成する必要はありません。**返った判断を次のcodeやagent stepが直接使えること**が適合条件です。
+公式reranking cookbookでは、CLERC legal query 40件でBM25候補をJevでrerankし、**top-1 5% → 18%、top-10 38% → 62%** と報告しています。ただしTypeSafe自身のharnessによる結果で、独立検証ではありません。
 
-出典: [TypeSafe Cookbooks / docs index](https://docs.typesafe.ai/llms.txt) / [browser-use/jev-ultrafast](https://github.com/browser-use/jev-ultrafast)
+出典: [TypeSafe Cookbooks / docs index](https://docs.typesafe.ai/llms.txt)
 
 ---
 
@@ -303,13 +303,14 @@ Google Flightsの限定比較では、同一モデル・同一設定で **中央
 - TypeSafeは **2026年9月15日** にJevをearly accessとして発表
 - DCVC主導で **$40M Series Seed**
 - SDK / API / cookbooks は既に公開
-- 第三者のlatency実測は複数ある
+- 公式Privacy Policyでは **API等のInputをmodel training / fine-tuningに使わない** と明記
+- 一方、Inputの具体的な保持日数、zero-retention、リージョン選択、Jev APIの公開SLAは未確認
 - 独立したaccuracy / calibration評価はまだ少ない
-- version、rate limit、価格、SLA、privacy条件は継続確認が必要
+- version、rate limit、価格は継続確認が必要
 
 現時点では、**新しい判断プリミティブとして有望かを検証する段階**と整理します。
 
-出典: [TypeSafe発表](https://typesafe.ai/blog/introducing-system-one-models-and-jev) / [DCVC](https://www.dcvc.com/news-insights/typesafe-emerges-from-stealth-with-a-new-way-of-doing-ai/)
+出典: [TypeSafe発表](https://typesafe.ai/blog/introducing-system-one-models-and-jev) / [Privacy Policy](https://typesafe.ai/legal/privacy-policy) / [DCVC](https://www.dcvc.com/news-insights/typesafe-emerges-from-stealth-with-a-new-way-of-doing-ai/)
 
 ---
 
@@ -349,6 +350,7 @@ early access段階では、**現在の仕様を固定値として扱わないこ
 - 公式DOOMは10Hzだが、日本からの第三者ゲーム実測は約0.5秒/判断の例があり、地域差は無視できない
 - ゲームでは毎フレーム処理ではなく、**候補をcodeで制約した低頻度の意味判断層**として使う方が現実的
 - 型付き出力でも意味的な誤判定は残るため、`confidence` とfallback設計が必要
+- Inputの非学習利用は公式確認できたが、保持期間・zero-retention・SLAは未確認
 - early accessのため、version・価格・SLA・accuracy / calibrationは継続確認が必要
 
 **Code calculates. Jev judges.** が成立する狭い判断ほど、Jevの適合度は高いと考えられます。
