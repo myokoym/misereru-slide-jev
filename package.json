@@ -6,10 +6,11 @@
     "node": ">=22"
   },
   "scripts": {
-    "build:project": "node scripts/build-project.mjs && node scripts/render-presentation-script.mjs",
-    "build:script-complete": "node scripts/build-project.mjs --require-complete-script && node scripts/render-presentation-script.mjs"
+    "build:project": "node scripts/build-project.mjs && node scripts/render-presentation-script.mjs && node scripts/render-article.mjs",
+    "build:script-complete": "node scripts/build-project.mjs --require-complete-script && node scripts/render-presentation-script.mjs && node scripts/render-article.mjs"
   },
   "devDependencies": {
-    "@marp-team/marp-cli": "4.5.1"
+    "@marp-team/marp-cli": "4.5.1",
+    "marked": "18.0.13"
   }
 }
