@@ -4,11 +4,14 @@ TypeSafe AI の **Jev / System One Models** を継続的に調査し、Markdown�
 
 - [`slides.md`](slides.md): 人に見せるための要約・スライド正本
 - [`presentation-script.md`](presentation-script.md): stable `key` で各slideに対応する発表原稿の正本
+- [`article.md`](article.md): スライドを見なくても単体で読める記事形式の正本
 - [`research.md`](research.md): 出典、第三者検証、留保、更新履歴を残す調査台帳
 - [`.agents/skills/misereru-slide-writing/SKILL.md`](.agents/skills/misereru-slide-writing/SKILL.md): misereru本体から取り込んだスライド内容設計Skill
 - [`.agents/skills/misereru-presentation-script/SKILL.md`](.agents/skills/misereru-presentation-script/SKILL.md): misereru本体から取り込んだ発表原稿Skill
+- [`.agents/skills/misereru-article-writing/SKILL.md`](.agents/skills/misereru-article-writing/SKILL.md): misereru本体から取り込んだ記事作成Skill
 - 公開スライド: https://myokoym.github.io/misereru-slide-jev/
 - 公開発表原稿: https://myokoym.github.io/misereru-slide-jev/presentation-script.html
+- 公開記事: https://myokoym.github.io/misereru-slide-jev/article.html
 
 ## 調査方針
 
@@ -25,8 +28,11 @@ TypeSafe AI の **Jev / System One Models** を継続的に調査し、Markdown�
 
 - `misereru-slide-writing`: `slides.md` の生成・再構成・推敲。Jev資料は調査・共有を主目的とするため、原則として **Reference mode** を適用する
 - `misereru-presentation-script`: `presentation-script.md` に口頭説明を持たせ、stable `key` でslideと対応させて相互レビューする
+- `misereru-article-writing`: `article.md` を、スライド参照なしで単体理解できるブログ記事・解説記事として構成し、slides / researchとの事実整合性を確認する
 
 このrepositoryでは `presentation-script.md` を作成済みで、生成される目次を含む全slideを対象にしたcomplete scriptとして管理します。通常buildでは構造整合性を検査し、全slide分のcoverageを明示的に確認する場合は `npm run build:script-complete` を使います。
+
+`article.md` はスライドや発表原稿の単純な書き起こしではありません。画面依存の表現を避け、記事だけで前提・根拠・留保・結論が理解できるよう、章立てと接続を独立して構成します。
 
 ## 現在の調査基準日
 
@@ -65,4 +71,6 @@ https://myokoym.github.io/misereru-slide-jev/
 
 公開発表原稿は実際のpresentation順で並び、各entryにslide番号・見出し・Narrationを表示し、対応するスライドへ戻るリンクを持ちます。raw `presentation-script.md` はPagesには公開しません。
 
-`misereru.config.json` では GitHub Pages publishing と発表原稿のPages公開を有効にしています。
+`article.md` もGitHub Actionsのbuild対象です。このrepositoryでは `publish.githubPages.article.enabled` を有効にしているため、Markdownを読み物向けの `dist/site/article.html` へ変換して公開します。記事はraw HTMLを許可せず、H1を1つだけ持つMarkdown文書として検査します。
+
+`misereru.config.json` では GitHub Pages publishing、発表原稿、記事のPages公開を有効にしています。
