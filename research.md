@@ -1,6 +1,6 @@
 # Jev 継続調査ノート
 
-最終更新: 2026-09-18
+最終更新: 2026-09-19
 
 このファイルは、TypeSafe AI の **Jev / System One Models** を継続的に調査するための根拠メモです。
 `slides.md` は見せるための要約、ここは出典・留保・第三者検証まで残す調査台帳として扱います。
@@ -357,6 +357,20 @@ DCVCも同日の記事で、**4,000万ドルのSeries Seed** を主導したと�
 - https://typesafe.ai/legal/privacy-policy
 - https://typesafe.ai/legal/terms
 
+## 10.6. 2026-09-19: 第三者から見え始めたproduction利用とearly-access運用リスク
+
+2026-09-18公開のTechCrunch記事で、TypeSafe外の開発者による具体的な利用報告が追加で確認できました。これはTypeSafe公式evalではなく、**開発者本人の報告をTechCrunchが取材・引用した第三者情報**として扱います。再現可能なbenchmark datasetやraw logが公開された独立検証とは区別します。
+
+- **Vercelのcommand safety classifier**: Vercelのsoftware engineer Pranit Sharmaは、commandの安全性を判定するclassifierをOpenAIのChatGPT Luna 5.6からJevへ置き換えたところ、**5〜18倍高速で、accuracyも高かった**と報告したとTechCrunchが伝えています。guardrail / safety判定が単なる公式cookbookではなく、実際の開発基盤で試されている具体例として重要です。ただし、dataset、試行回数、accuracy値そのものは記事中に示されていないため、定量benchmarkとしては扱いません。
+- **Bryo AIのbusiness-email classification**: CTO Nikhil Mudholkarの比較では、Geminiの方がaccuracyはわずかに高かった一方、Jevは**10〜20倍安価**だったと報告されています。これは「Jevが常に意味精度でfrontier LLMを上回る」という見方を支持せず、既存の注意書きどおり **accuracyとcost/latencyを別軸で評価すべき**という材料になります。また、confidence/probabilityをworkflow automationへ直接使える点を評価しています。
+- **early-access時のAPI capacity**: TechCrunchは、launch後の需要増でTypeSafeが**一時的にAPI利用者へサービスを提供できない状態になった**と報じています。これは公開SLAやrate limitの代替情報ではありませんが、production導入ではモデル性能だけでなくcapacity / availability / fallbackを確認すべきという新しい運用上の材料です。
+- TypeSafe CEO Diogo Almeidaは、JevでLLM agent traceを監視しjailbreakを防ぐ利用が出ていると説明していますが、これは**ベンダー側の観測・主張**であり、上記Vercel報告と同じ証拠レベルには置きません。
+
+この追加情報からも、型付き出力の保証と意味的accuracyは分離して扱います。Vercelの「accuracyも高かった」という報告は特定classifierでの比較であり、Jev一般の意味的正答保証ではありません。
+
+第三者報道:
+- https://techcrunch.com/2026/09/18/a-new-kind-of-ai-model-from-a-chatgpt-inventor-is-thrilling-developers/
+
 ## 11. 現時点の評価
 
 ### 強い点
@@ -368,6 +382,7 @@ DCVCも同日の記事で、**4,000万ドルのSeries Seed** を主導したと�
 - narrow / atomic な意味判断を大量に挟むagent harnessと相性がよい。
 - 公式DOOMや複数の第三者ゲーム実装から、interactive systemのdecision layerとしての用途が実際に試されている。
 - 公式Privacy Policyでは、API等へ送るInputをモデルtraining / fine-tuningに使わないと明記されている。
+- command safety classifierやbusiness-email分類でも第三者の具体的な採用・比較報告が出始めた。ただし再現benchmarkではない。
 
 ### 未確定・注意点
 
@@ -380,6 +395,7 @@ DCVCも同日の記事で、**4,000万ドルのSeries Seed** を主導したと�
 - game用途でも、60Hz/120Hzのengine loopを置き換えるのではなく、意味判断の層として設計する必要がある。
 - logit/logprobsを使うLLMや専用AIでも類似の構成は可能で、Jevだけの独占的用途ではない。
 - API Inputの具体的な保持日数、zero-retention、リージョン選択、公開SLAは確認できていない。
+- launch直後には需要増でAPI提供不能になったとの報道があり、productionではavailability / fallbackを別途検証する必要がある。
 
 ## 12. 継続追跡する項目
 
@@ -395,6 +411,7 @@ DCVCも同日の記事で、**4,000万ドルのSeries Seed** を主導したと�
 10. Vercel AI Gateway等、外部基盤経由での利用性
 11. production SLA、データ保持、privacy、enterprise条件
 12. Jev向けのprompt/question設計パターン
+13. launch後のAPI capacity / availabilityと障害・rate-limit情報
 
 ## 13. 主要出典
 
@@ -426,3 +443,4 @@ DCVCも同日の記事で、**4,000万ドルのSeries Seed** を主導したと�
 - Aera: https://aerabrowser.com/news/agent-memory-doesnt-need-a-generator-typesafes-jev-vs-llm-on-400-real-tasks
 - browser-use/jev-ultrafast: https://github.com/browser-use/jev-ultrafast
 - mizchi/jev-gomoku: https://github.com/mizchi/jev-gomoku
+- TechCrunch（Vercel / Bryo AI利用報告、launch後capacity）: https://techcrunch.com/2026/09/18/a-new-kind-of-ai-model-from-a-chatgpt-inventor-is-thrilling-developers/
