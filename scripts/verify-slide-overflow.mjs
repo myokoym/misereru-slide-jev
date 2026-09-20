@@ -33,7 +33,7 @@ try {
   });
 
   const report = await page.evaluate(() => {
-    const sections = [...document.querySelectorAll('.marpit section')];
+    const sections = [...document.querySelectorAll('svg[data-marpit-svg] section')];
     const tolerance = 1;
 
     return sections.map((section, index) => {
@@ -76,13 +76,17 @@ try {
 
   const layoutDir = resolve(root, 'dist/layout-check');
   await mkdir(layoutDir, { recursive: true });
-  const sectionHandles = await page.$$('.marpit section');
+  const sectionHandles = await page.$$('svg[data-marpit-svg] section');
   for (let index = 0; index < sectionHandles.length; index += 1) {
     await sectionHandles[index].screenshot({
       path: join(layoutDir, `slide-${String(index + 1).padStart(2, '0')}.png`),
     });
   }
   await writeFile(join(layoutDir, 'report.json'), `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+
+  if (report.length === 0) {
+    throw new Error('Rendered overflow check found 0 slides; selector no longer matches generated Marp HTML');
+  }
 
   const failures = report.filter((slide) => slide.overflow);
   if (failures.length > 0) {
