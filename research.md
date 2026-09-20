@@ -1,6 +1,6 @@
 # Jev 継続調査ノート
 
-最終更新: 2026-09-19
+最終更新: 2026-09-20
 
 このファイルは、TypeSafe AI の **Jev / System One Models** を継続的に調査するための根拠メモです。
 `slides.md` は見せるための要約、ここは出典・留保・第三者検証まで残す調査台帳として扱います。
@@ -371,6 +371,66 @@ DCVCも同日の記事で、**4,000万ドルのSeries Seed** を主導したと�
 第三者報道:
 - https://techcrunch.com/2026/09/18/a-new-kind-of-ai-model-from-a-chatgpt-inventor-is-thrilling-developers/
 
+## 10.7. 2026-09-20: Jev 1.13の独立benchmarkと日本語のagent実装実測
+
+### JevBench v1.2: accuracy / calibration / latencyを同じharnessで比較
+
+Benchmark Heavenが2026-09-19に公開した **JevBench v1.2** は、TypeSafe非提携の第三者benchmarkで、harness・公開task・scoring code・results JSONをGitHubで公開しています。534 decisions（easy 72 / standard 96 / judge 146 / hard 220）を、ドイツのserverから各systemへserialに実行しています。
+
+Jev 1.13.0の結果は次のとおりです。
+
+- easy **100.0%** / standard **99.0%** / judge **94.5%** / hard **74.1%**
+- JevBench Intelligence score **90.4**
+- Calibration score **82.7**
+- production APIへのraw latency **p50 0.65s / p95 0.72s**
+- 実測token量と公称単価から算出したcost **$0.041 / 1,000 decisions**
+- Intelligence / Calibration / Speed / Costを各25%で幾何平均した独自compositeでは **75.3**
+
+比較対象ではGPT-5.6 Luna (low)がIntelligence **96.8**、Calibration **89.8**でJevを上回る一方、raw latencyはp50 **0.97s / p95 1.82s**、costは **$0.247 / 1,000 decisions**。このbenchmarkでは、Jevは「最高accuracy」ではなく、**accuracy・calibrationをある程度維持しながらspeed / costを下げるtrade-off**として見える結果です。
+
+重要な留保:
+
+- JevBench Scoreは第三者が定義した独自compositeで、TypeSafe公式指標ではない。
+- hard tierはClaude Opus 5とGPT-5.6 Solで作成・cross-reviewされており、すべてが人手ground truthというわけではない。
+- self-hosted / demo endpointにはproduction load近似のためlatency補正を入れているが、**JevとGPT-5.6 Lunaはproduction APIのraw値**。
+- benchmark全体の優劣を、個別production workloadの正答率へそのまま一般化しない。
+
+一方、これまで不足していた **Jevのcalibrationを他systemと同じ公開harnessで測る第三者資料**としては意味が大きいです。型保証とは別に、確率の品質を検証する材料として扱います。
+
+第三者benchmark / 再現資料:
+- https://benchmarkheaven.com/jev-models
+- https://github.com/fstandhartinger/jevbench
+
+### モデルversion / 外部gateway
+
+OpenRouterは **Jev 1.13** を2026-09-18 releaseとして掲載し、context **32K**、価格 **$0.042/M input / output free** と表示しています。`Jev Latest` はJev familyのlatestへredirectするaliasです。これはTypeSafe公式model changelogではなく外部gatewayのmodel metadataなので、`jev-latest` が常に1.13を指すことの公式保証とは扱いません。
+
+Vercel AI GatewayでもJevが利用可能で、TypeSafe direct API以外のaccess経路が実際に存在します。外部gateway経由ではgateway側の契約・routing・privacy条件も別途確認が必要です。
+
+外部platform:
+- https://openrouter.ai/typesafe/jev-1.13/
+- https://openrouter.ai/~typesafe/jev-latest/
+- https://vercel.com/changelog/typesafe-ai-jev-now-available-on-ai-gateway
+
+### 日本語実測: Claude Code compactionの「要約」ではなく保持判定に使う
+
+2026-09-19公開のZenn記事では、`fast-jev-compaction` をClaude Codeのcompaction hookへ組み込み、tool call / resultごとに「今後も必要か」をJevで判定して不要contextを落とす実装が検証されています。
+
+- n=3 sessionの小規模検証。
+- Desktop sessionでは **187,635 tokens → 33,447 tokens（82%削減）を1,351ms**。
+- terminalの別sessionではmessage数ベースで **86%削減 / 40%削減**。
+- 1 requestに約80 questions（tool call 40件分）をbatchする設計。
+- state約14,200 tokensの実測では1 requestで処理。
+- 失敗時や削減率25%未満ではClaude Code組込みsummaryへfallbackする。
+
+これは生成要約をJevへ置換したものではありません。**原文を生成し直さず、保持 / 削除というbounded decisionへ問題を変形した**例です。Jevの役割分担を示すagent/context-management用途として有用です。
+
+ただしn=3で、compaction後のtask qualityや長期的な再読コストは未評価です。記事自身も、削除後に同じcommandを再実行した例や、日本語token推定が32K contextを超える可能性を注意点として挙げています。
+
+日本語第三者実測:
+- https://zenn.dev/orangewk/articles/claude-code-fast-jev-compaction
+- https://github.com/tamaratran/fast-jev-compaction
+
 ## 11. 現時点の評価
 
 ### 強い点
@@ -383,12 +443,13 @@ DCVCも同日の記事で、**4,000万ドルのSeries Seed** を主導したと�
 - 公式DOOMや複数の第三者ゲーム実装から、interactive systemのdecision layerとしての用途が実際に試されている。
 - 公式Privacy Policyでは、API等へ送るInputをモデルtraining / fine-tuningに使わないと明記されている。
 - command safety classifierやbusiness-email分類でも第三者の具体的な採用・比較報告が出始めた。ただし再現benchmarkではない。
+- JevBench v1.2では、公開harness上でJev 1.13.0のaccuracyだけでなくcalibrationも測定され、低コスト・低遅延とのtrade-offを第三者データで比較できるようになった。
 
 ### 未確定・注意点
 
 - early access段階であり、仕様・価格・rate limit・モデルversionが動きやすい。
 - 一般的な公開ベンチマークでは比較しづらく、TypeSafe自身のeval設計に依存する部分が大きい。
-- 第三者精度検証はまだ少ない。
+- 第三者精度検証はまだ少なく、JevBenchも独自task / 独自scoreである。
 - 数学・日付・長いcontext・敵対的入力など、LLMとは違う形のjaggednessがある。
 - 生成能力がないため、Jev単独でagent全体を置換するものではない。
 - レイテンシは地域差があり、日本から公式DOOMと同じ10Hzを前提にはできない。
@@ -408,10 +469,11 @@ DCVCも同日の記事で、**4,000万ドルのSeries Seed** を主導したと�
 7. real-time / game / interactive用途の公開harnessと再現実測
 8. OpenAI / Anthropic / Google等のstructured decision系との比較
 9. LLM logit/logprobs利用との速度・精度・API usability比較
-10. Vercel AI Gateway等、外部基盤経由での利用性
+10. Vercel AI Gateway / OpenRouter等、外部基盤経由での利用性・契約条件
 11. production SLA、データ保持、privacy、enterprise条件
 12. Jev向けのprompt/question設計パターン
 13. launch後のAPI capacity / availabilityと障害・rate-limit情報
+14. agent context management / compaction用途での長期品質と再読コスト
 
 ## 13. 主要出典
 
@@ -433,14 +495,20 @@ DCVCも同日の記事で、**4,000万ドルのSeries Seed** を主導したと�
 - DevelopersIO（実測あり）: https://dev.classmethod.jp/articles/jev-for-llm-model-routing/
 - Zenn（Jev / LLM比較、DOOM・Mario）: https://zenn.dev/nwn/articles/824026c76116e0
 - Zenn（五目並べ、国内レイテンシ実測）: https://zenn.dev/mizchi/articles/jev-plays-gomoku
+- Zenn（Claude Code compaction実測）: https://zenn.dev/orangewk/articles/claude-code-fast-jev-compaction
 - note（Snake実装）: https://note.com/tomonr1984/n/n057b04c37fda
 - VisionHub（日本語整理）: https://visionhub.jp/presentations/day_slides/day_slide_2026_09_14.html
 
 ### 第三者検証・実装
 
+- JevBench: https://benchmarkheaven.com/jev-models
+- JevBench GitHub: https://github.com/fstandhartinger/jevbench
 - Every: https://every.to/also-true-for-humans/mini-vibe-check-typesafe-s-jev-judged-everything-i-ve-written-in-0-7-seconds
 - Empryo: https://empryo.com/blog/jev-and-the-harness
 - Aera: https://aerabrowser.com/news/agent-memory-doesnt-need-a-generator-typesafes-jev-vs-llm-on-400-real-tasks
 - browser-use/jev-ultrafast: https://github.com/browser-use/jev-ultrafast
 - mizchi/jev-gomoku: https://github.com/mizchi/jev-gomoku
+- fast-jev-compaction: https://github.com/tamaratran/fast-jev-compaction
 - TechCrunch（Vercel / Bryo AI利用報告、launch後capacity）: https://techcrunch.com/2026/09/18/a-new-kind-of-ai-model-from-a-chatgpt-inventor-is-thrilling-developers/
+- OpenRouter Jev 1.13: https://openrouter.ai/typesafe/jev-1.13/
+- Vercel AI Gateway: https://vercel.com/changelog/typesafe-ai-jev-now-available-on-ai-gateway
