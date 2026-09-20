@@ -71,6 +71,14 @@ jobs:
       - name: Verify rendered slide overflow
         run: node scripts/verify-slide-overflow.mjs
 
+      - name: Upload slide layout QA
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: slide-layout-qa
+          path: dist/layout-check/
+          if-no-files-found: warn
+
       - name: Upload generated outputs
         uses: actions/upload-artifact@v7
         with:
