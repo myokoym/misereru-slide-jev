@@ -13,6 +13,7 @@ on:
       - 'scripts/build-project.mjs'
       - 'scripts/render-presentation-script.mjs'
       - 'scripts/render-article.mjs'
+      - 'scripts/verify-slide-overflow.mjs'
       - 'package.json'
       - '.github/workflows/build.yml'
 
@@ -66,6 +67,9 @@ jobs:
 
       - name: Build configured outputs
         run: npm run build:project
+
+      - name: Verify rendered slide overflow
+        run: node scripts/verify-slide-overflow.mjs
 
       - name: Upload generated outputs
         uses: actions/upload-artifact@v7
