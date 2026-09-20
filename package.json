@@ -11,6 +11,7 @@
   },
   "devDependencies": {
     "@marp-team/marp-cli": "4.5.1",
-    "marked": "18.0.13"
+    "marked": "18.0.13",
+    "puppeteer-core": "25.11.0"
   }
 }
