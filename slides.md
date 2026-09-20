@@ -62,8 +62,112 @@ Jevへ「全部考えさせる」のではなく、**モデルが必要な判断
 
 ---
 
+<!-- {"key":"section-usecases","type":"section"} -->
+# 2. 具体的な用途
+
+Jevは「生成しない」からこそ、判断だけ必要な場所へ差し込みやすい
+
+---
+
+<!-- {"key":"usecases-map"} -->
+# 用途は6系統 — agent・検索・安全判定
+
+- **Agent / harness制御**: model・tool・subagent選択、continue / retry / stop
+- **Retrieval / evidence**: RAG採否、reranking、citation支持
+- **Guardrail / verification**: jailbreak、harm、command safety
+
+共通するのは、**回答空間を限定し、返った判断をcodeが直接使えること**です。
+
+出典: [TypeSafe docs](https://docs.typesafe.ai/llms.txt) / [Vercel: When to use Jev](https://vercel.com/i/when-to-use-jev)
+
+---
+
+<!-- {"key":"usecases-map-2"} -->
+# 用途は6系統 — 業務・大量選別・interactive
+
+- **業務workflow分類**: 問い合わせ・障害・email・priority / escalation
+- **Batch filtering / context管理**: parallel判定、semantic filtering、keep / drop
+- **Real-time / interactive**: browser次行動、DOOM、各種game decision
+
+業界名より、**「何を判断させるか」**で適合性を見る方が整理しやすくなります。
+
+出典: [TypeSafe docs](https://docs.typesafe.ai/llms.txt)
+
+---
+
+<!-- {"key":"usecases-routing"} -->
+# Agent / harnessでは「次に何をするか」だけを判断させる
+
+- LLM / subagentのrouting
+- tool / skill候補の選択
+- continue / retry / ask user / stop
+- queue・priority・escalation分類
+
+**Jevはdecision、実行権限・tool実行・policyはcode**へ残します。Vercelもこの役割分担を紹介しています。
+
+出典: [Vercel: Jev agent control](https://vercel.com/i/jev-agent-control) / [TypeSafe docs](https://docs.typesafe.ai/llms.txt)
+
+---
+
+<!-- {"key":"usecases-retrieval"} -->
+# Retrieval・verificationでは「採用するか」「支持するか」を判定する
+
+- RAG passage の採用・棄却
+- citationがclaimを支持しているか
+- 検索結果のreranking
+- prompt injection / harmful outputの検査
+
+公式reranking cookbookでは、CLERC legal query 40件でBM25候補をJevでrerankし、**top-1 5% → 18%、top-10 38% → 62%** と報告しています。ただしTypeSafe自身のharnessによる結果で、独立検証ではありません。
+
+出典: [TypeSafe Cookbooks / docs index](https://docs.typesafe.ai/llms.txt)
+
+---
+
+<!-- {"key":"usecases-production"} -->
+# safety判定・業務分類でも第三者の利用報告が出ている
+
+| 例 | 報告 | 留保 |
+| --- | --- | --- |
+| Vercel command safety | Luna 5.6比で5〜18倍高速、accuracyも高かった | dataset・試行回数は未公開 |
+| Bryo AI email分類 | Geminiがわずかに高精度、Jevは10〜20倍安価 | 再現benchmarkではない |
+
+**特定workflowでcost・latency・accuracyを比較した採用例**として扱います。
+
+出典: [TechCrunch, 2026-09-18](https://techcrunch.com/2026/09/18/a-new-kind-of-ai-model-from-a-chatgpt-inventor-is-thrilling-developers/)
+
+---
+
+<!-- {"key":"usecases-context"} -->
+# Context管理では、要約生成をkeep / drop判定へ変形できる
+
+`fast-jev-compaction` はClaude Codeのtool履歴を選別します。
+
+- keep / truncate / drop をJevで判定
+- **187,635 → 33,447 tokens（82%削減）を1,351ms**
+- n=3の小規模実測。長期task qualityは未評価
+- 失敗時や削減不足では組込みsummaryへfallback
+
+**生成し直すのではなく、原文を残すか捨てるか判断する**用途です。
+
+出典: [Zenn: fast-jev-compaction](https://zenn.dev/orangewk/articles/claude-code-fast-jev-compaction)
+
+---
+
+<!-- {"key":"browser"} -->
+# browser-useの限定比較では、Jev導入後に中央値25%短縮と報告されている
+
+公開実装 `browser-use/jev-ultrafast` は、ブラウザ操作の判断部分へJevを組み込んでいます。
+
+Google Flightsの限定比較では、同一モデル・同一設定で **中央値 9.450秒 → 7.092秒（25%短縮）** と報告しています。
+
+ただし比較は **1タスク・3ペア** の小規模検証です。リポジトリ自身も一般的な信頼性benchmarkではないと明記しているため、一般化はしません。
+
+出典: [GitHub](https://github.com/browser-use/jev-ultrafast) / [performance.md](https://github.com/browser-use/jev-ultrafast/blob/main/docs/performance.md)
+
+---
+
 <!-- {"key":"section-performance","type":"section"} -->
-# 2. 速度と費用はどこまで低いか
+# 3. 速度と費用はどこまで低いか
 
 公式値と第三者実測を分けて見る
 
@@ -81,21 +185,29 @@ Jevへ「全部考えさせる」のではなく、**モデルが必要な判断
 ---
 
 <!-- {"key":"latency"} -->
-# 数百ms級は確認できるが、地域差を含めて見る必要がある
+# 公式の70〜500msは、測定地点を含めて読む必要がある
 
-TypeSafeは **70〜500ms** のend-to-end response timeを掲げています。ただし公式自身が、公開evalは主にサービス拠点に近い**米国西海岸のラップトップから測定**していると説明しています。
+TypeSafeは **70〜500ms** のend-to-end response timeを掲げています。
 
-| 出典 | 条件 | 実測 |
-| --- | --- | --- |
-| TypeSafe | 公式レンジ | 70〜500ms |
-| DevelopersIO | 4分類 × 各10回 | 中央値 643〜674ms |
-| Empryo | 102 error cases | 中央値 273ms |
-| Aera | 248 live calls | 中央値 226ms / p95 497ms |
-| Zenn 五目並べ | 日本から25手 | 多くが約484〜603ms、1手1243ms |
+ただし公式自身が、公開evalの多くをサービス拠点に近い**米国西海岸のラップトップから測定**していると説明しています。
 
-**「100ms級が可能」と「日本から常時100ms級」は別の主張**として扱います。
+したがって、公式レンジはモデル/APIの目安として使い、**日本からの実効値とは分けて評価**します。
 
-出典: [TypeSafe発表](https://typesafe.ai/blog/introducing-system-one-models-and-jev) / [DevelopersIO](https://dev.classmethod.jp/articles/jev-for-llm-model-routing/) / [Empryo](https://empryo.com/blog/jev-and-the-harness) / [Aera](https://aerabrowser.com/news/agent-memory-doesnt-need-a-generator-typesafes-jev-vs-llm-on-400-real-tasks) / [Zenn: 五目並べ](https://zenn.dev/mizchi/articles/jev-plays-gomoku)
+出典: [TypeSafe発表](https://typesafe.ai/blog/introducing-system-one-models-and-jev)
+
+---
+
+<!-- {"key":"latency-thirdparty"} -->
+# 第三者実測は約0.2〜0.7秒中心で、日本では約0.5秒の例がある
+
+- DevelopersIO: 4分類×各10回、中央値 **643〜674ms**
+- Empryo: 102 error cases、中央値 **273ms**
+- Aera: 248 calls、中央値 **226ms / p95 497ms**
+- Zenn五目並べ: 日本から25手、多くが **484〜603ms**、1手1243ms
+
+**「100ms級が可能」と「日本から常時100ms級」は別の主張**です。
+
+出典: [DevelopersIO](https://dev.classmethod.jp/articles/jev-for-llm-model-routing/) / [Empryo](https://empryo.com/blog/jev-and-the-harness) / [Aera](https://aerabrowser.com/news/agent-memory-doesnt-need-a-generator-typesafes-jev-vs-llm-on-400-real-tasks) / [Zenn](https://zenn.dev/mizchi/articles/jev-plays-gomoku)
 
 ---
 
@@ -113,74 +225,63 @@ TypeSafeは用途として **Real-time applications** を明示し、「100ms sp
 ---
 
 <!-- {"key":"realtime-game-design"} -->
-# ゲームでは毎フレーム処理より「数Hz〜10Hzの意味判断層」が現実的
+# ゲームでは毎フレーム処理ではなく、意味判断だけを低頻度で呼ぶ
 
-DOOMの10Hzと、日本から約500ms前後になった第三者実測を合わせると、現状のJevを60Hz/120Hzのゲームループそのものへ置く設計は適しません。
-
-| 通常code / engine | Jevへ切り出しやすい判断 |
+| code / engineへ残す | Jevへ切り出す |
 | --- | --- |
-| 入力、物理、衝突、移動補間 | 攻める / 退く / 待つ |
-| 射撃・ダメージ計算 | どの敵を優先するか |
-| pathfinding・合法手生成 | どの候補行動を選ぶか |
-| animation・描画 | 援軍、撤退、交渉などの状態判断 |
+| 入力・物理・衝突・補間 | 攻める / 退く / 待つ |
+| 射撃・damage計算 | target priority |
+| pathfinding・合法手生成 | 候補行動の選択 |
+| animation・描画 | 援軍・撤退・交渉 |
 
-**合法手・実行可能候補をcode側で絞り、Jevには意味的な選択を任せる**構成が、公開例と整合します。
-
-これは公開デモと実測からの設計上の含意であり、TypeSafeが2〜10Hzを製品仕様として保証しているわけではありません。
+**実行可能候補をcodeで絞り、その中の意味的選択をJevへ任せる**構成です。
 
 ---
 
 <!-- {"key":"realtime-thirdparty"} -->
-# 第三者でもMario・五目並べ・Snakeが試され、レイテンシがゲーム結果へ影響している
+# Mario・五目並べ・Snakeでも「state → 候補 → Choice」が使われている
 
-| 例 | 確認できること | 留保 |
-| --- | --- | --- |
-| Mario | 同一ハーネス内のLLM比較でJevが最良 | 公開デモより約3倍のlatency。最新推論LLMとの公平な比較ではない |
-| 五目並べ | 合法手だけをChoiceへ渡し、25手を13.9秒で対局 | 多くの手が約0.5秒。1手1243msもある |
-| Snake | game stateから移動方向をChoiceで決定 | 個人実装であり性能benchmarkではない |
+- **Mario**: 同一harness内でJevが比較LLMより良い結果。ただしlatencyは公開demoの約3倍
+- **五目並べ**: 合法手だけをChoiceへ渡し、25手を13.9秒で対局
+- **Snake**: game stateから移動方向をChoice。個人実装でbenchmarkではない
 
-少なくとも、**ゲーム状態 → 限定された行動候補 → 確率付き選択**という設計は複数の独立実装で再現されています。
+複数の独立実装で、**候補をcode側で制約してから意味選択を任せる**形が確認できます。
 
-日本語資料: [Zenn: Mario検証](https://zenn.dev/nwn/articles/824026c76116e0) / [Zenn: 五目並べ](https://zenn.dev/mizchi/articles/jev-plays-gomoku) / [note: Snake](https://note.com/tomonr1984/n/n057b04c37fda)
+出典: [Zenn: Mario](https://zenn.dev/nwn/articles/824026c76116e0) / [Zenn: 五目並べ](https://zenn.dev/mizchi/articles/jev-plays-gomoku) / [note: Snake](https://note.com/tomonr1984/n/n057b04c37fda)
 
 ---
 
 <!-- {"key":"realtime-comparison"} -->
-# 「リアルタイム判断」はJevだけに可能な処理ではない
+# 比較対象は「JSON生成LLM」だけではない
 
-第三者検証では、候補を短いIDへ割り当ててLLMのlogit / logprobsを直接比較し、自由文JSON生成を避ける方法でも高速化できることが示されています。
+- **Jev**: 型付き確率出力、並列質問を専用APIで提供
+- **LLM + JSON生成**: 実装しやすいが生成量・parse処理が増える
+- **LLM + logit / logprobs**: 条件が合えば近い判定形を構成可能
+- **rule / utility AI / 専用model**: 決定性・局所性能・latencyで有力
 
-そのため比較すべきなのは、単純な「Jev vs JSONを全文生成するLLM」だけではありません。
-
-- Jev: 型付き確率出力をAPIとして提供し、複数質問を並列評価
-- LLM + logit: 条件が合えば近い判定形を構成できる
-- 専用ゲームAI / rule / utility AI: latency・決定性・局所性能では依然有力
-
-現時点では、**Jevの差は「ゲームAIだから」ではなく、意味判断用interfaceを低遅延・低単価で製品化していること**にあります。
+Jevの差は、**意味判断用interfaceを低遅延・低単価で製品化していること**です。
 
 出典: [Zenn: Jevを正しく驚く](https://zenn.dev/nwn/articles/824026c76116e0)
 
 ---
 
 <!-- {"key":"section-quality","type":"section"} -->
-# 3. 型保証と判断精度は別に評価する
+# 4. 型保証と判断精度は別に評価する
 
 構造化出力の強さだけで、意味的な正しさは決まらない
 
 ---
 
 <!-- {"key":"hallucination"} -->
-# 「hallucinateしない」は、出力空間を壊しにくいという意味で読む
+# 「hallucinateしない」は、候補外を生成しにくいという意味で読む
 
-Jevは自由文を生成せず、事前定義した型・候補空間から結果を返します。そのため、次の失敗は構造的に避けやすくなります。
+Jevは事前定義した型・候補空間から結果を返すため、次の失敗を避けやすくなります。
 
 - 存在しないJSON fieldを追加する
 - 候補外の文字列を返す
 - 指定した型そのものを壊す
 
-一方で、**定義済み候補の中から誤ったものを選ぶことはあります**。
-
-したがって、型の整合性と意味的正答率は別の品質指標として扱います。
+ただし、**定義済み候補の中で誤判定することはあります**。型の整合性と意味的正答率は別です。
 
 出典: [TypeSafe発表](https://typesafe.ai/blog/introducing-system-one-models-and-jev) / [Confidence](https://docs.typesafe.ai/confidence)
 
@@ -203,9 +304,7 @@ DevelopersIOが整理した公開値では、次の差があります。
 ---
 
 <!-- {"key":"confidence"} -->
-# confidenceは自動実行・再確認・エスカレーションの分岐に使える
-
-Choice / Score は確率分布と `confidence` を返します。
+# confidenceは、自動実行するかfallbackするかの分岐に使う
 
 | confidence | 処理例 |
 | --- | --- |
@@ -213,14 +312,14 @@ Choice / Score は確率分布と `confidence` を返します。
 | 中 | 追加確認・別質問 |
 | 低 | 人または別モデルへ送る |
 
-`confidence` は正答保証ではありません。**モデルの不確実性をシステム制御へ露出させる値**として使います。
+**confidenceは正答保証ではなく、不確実性をsystem controlへ露出する値**です。
 
 出典: [TypeSafe Confidence](https://docs.typesafe.ai/confidence)
 
 ---
 
 <!-- {"key":"section-limits","type":"section"} -->
-# 4. JevにはLLMと異なるjaggednessがある
+# 5. JevにはLLMと異なるjaggednessがある
 
 意味判断へ特化した分、任せない方がよい処理も明確
 
@@ -229,136 +328,50 @@ Choice / Score は確率分布と `confidence` を返します。
 <!-- {"key":"limits"} -->
 # 計算・日付比較・長すぎるstateはcode側へ寄せる
 
-TypeSafeは `Jev 1.13 jaggedness` として既知の弱点を公開しています。現時点の調査で確認している注意点です。
-
 - 曖昧な意図補完より、指示を文字通りに読みやすい
 - 計数・算術を任せない
 - 日付の大小比較や期間計算はcodeへ寄せる
 - 無関係な情報を `state` に詰めすぎない
-- user-controlled textを自動的に安全な入力として扱わない
+- user-controlled textを自動的に安全扱いしない
 - 複数判断を1問へ詰めず、atomicに分ける
 
-この節は、公式jaggedness文書の更新に合わせて継続確認します。
-
-出典: [TypeSafe docs index](https://docs.typesafe.ai/llms.txt) / 詳細メモ: [`research.md`](research.md)
+出典: [TypeSafe docs index](https://docs.typesafe.ai/llms.txt) / 詳細: [`research.md`](research.md)
 
 ---
 
-<!-- {"key":"section-usecases","type":"section"} -->
-# 5. Jevが効きやすいのは、限定した回答空間をcodeがすぐ使う場所
+<!-- {"key":"section-status","type":"section"} -->
+# 6. 現在地と継続確認
 
-生成モデル全体の置換ではなく、その前後・内部へ差し込む
-
----
-
-<!-- {"key":"usecases-map"} -->
-# 用途は業界ではなく「何を判断させるか」で6系統に整理できる
-
-| 系統 | 代表例 |
-| --- | --- |
-| Agent / harness制御 | model・tool・subagent選択、continue / retry / stop |
-| Retrieval / evidence | RAG採否、reranking、citation支持 |
-| Guardrail / verification | jailbreak、harm、command safety |
-| 業務workflow分類 | 問い合わせ・障害・email・priority分類 |
-| Batch filtering / context管理 | parallel判定、keep / drop、semantic filtering |
-| Real-time / interactive | browser次行動、DOOM、各種game decision |
-
-共通条件は、**回答空間を限定でき、返った判断をcodeが直接使えること**です。
-
-出典: [TypeSafe docs](https://docs.typesafe.ai/llms.txt) / [Vercel: When to use Jev](https://vercel.com/i/when-to-use-jev)
-
----
-
-<!-- {"key":"usecases-routing"} -->
-# Agent / harness制御では「次に何をするか」だけをJevへ切り出せる
-
-- LLM / subagent のrouting
-- tool / skill候補の選択
-- continue / retry / ask user / stop
-- queue・priority・escalation分類
-
-実行権限、tool引数検証、決定済みpolicyはcodeへ残し、**曖昧な次アクション選択だけをJevへ渡す**構成です。
-
-Vercelも、agent loop内のdecision pointへJevを置き、tool executionとpolicyはapplication codeへ残す使い分けを紹介しています。
-
-出典: [Vercel: Jev agent control](https://vercel.com/i/jev-agent-control) / [TypeSafe docs](https://docs.typesafe.ai/llms.txt)
-
----
-
-<!-- {"key":"usecases-retrieval"} -->
-# Retrieval・verificationでは「採用するか」「支持するか」を判定する
-
-- RAG passage の採用・棄却
-- citationがclaimを支持しているか
-- 検索結果のreranking
-- prompt injection / harmful outputの検査
-
-公式reranking cookbookでは、CLERC legal query 40件でBM25候補をJevでrerankし、**top-1 5% → 18%、top-10 38% → 62%** と報告しています。ただしTypeSafe自身のharnessによる結果で、独立検証ではありません。
-
-出典: [TypeSafe Cookbooks / docs index](https://docs.typesafe.ai/llms.txt)
-
----
-
-<!-- {"key":"usecases-production"} -->
-# 第三者報告でもsafety判定と業務分類への投入が始まっている
-
-| 例 | 報告内容 | 留保 |
-| --- | --- | --- |
-| Vercel command safety classifier | Luna 5.6からJevへ替え、5〜18倍高速かつaccuracyも高かった | dataset・試行回数・accuracy値は未公開 |
-| Bryo AI business-email分類 | Geminiがわずかに高精度、Jevは10〜20倍安価 | 開発者報告で再現benchmarkではない |
-
-これは「Jevが常に高精度」という証拠ではなく、**safety / workflow分類でcost・latency・confidenceを含めて採用判断されている**例です。
-
-出典: [TechCrunch, 2026-09-18](https://techcrunch.com/2026/09/18/a-new-kind-of-ai-model-from-a-chatgpt-inventor-is-thrilling-developers/)
-
----
-
-<!-- {"key":"usecases-context"} -->
-# Context管理では「要約する」代わりに、原文を残すか捨てるか判定できる
-
-`fast-jev-compaction` はClaude Codeのtool call / resultを、**今後も必要か**というbounded decisionへ変換しています。
-
-- user / assistant本文は生成し直さず保持
-- tool履歴を keep / truncate / drop
-- Desktop sessionで **187,635 → 33,447 tokens（82%削減）を1,351ms**
-- n=3の小規模実測で、長期task qualityは未評価
-- Jev失敗時や削減不足では組込みsummaryへfallback
-
-生成要約の置換ではなく、**生成問題を選別問題へ変形する**用途です。
-
-出典: [Zenn: fast-jev-compaction](https://zenn.dev/orangewk/articles/claude-code-fast-jev-compaction)
-
----
-
-<!-- {"key":"browser"} -->
-# browser-useの限定比較では、Jev導入後に中央値25%短縮と報告されている
-
-公開実装 `browser-use/jev-ultrafast` は、ブラウザ操作の判断部分へJevを組み込んでいます。
-
-Google Flightsの限定比較では、同一モデル・同一設定で **中央値 9.450秒 → 7.092秒（25%短縮）** と報告しています。
-
-ただし比較は **1タスク・3ペア** の小規模検証です。リポジトリ自身も一般的な信頼性benchmarkではないと明記しているため、一般化はしません。
-
-出典: [GitHub](https://github.com/browser-use/jev-ultrafast) / [performance.md](https://github.com/browser-use/jev-ultrafast/blob/main/docs/performance.md)
+early accessのため、性能だけでなく運用条件も追う
 
 ---
 
 <!-- {"key":"status"} -->
-# 2026年9月時点ではearly accessで、production標準部品とみなすには検証が足りない
+# 2026年9月時点ではearly access
 
-確認できている公開状況です。
-
-- TypeSafeは **2026年9月15日** にJevをearly accessとして発表
+- TypeSafeは **2026年9月15日** にJevを発表
 - DCVC主導で **$40M Series Seed**
-- SDK / API / cookbooks は既に公開
-- 公式Privacy Policyでは **API等のInputをmodel training / fine-tuningに使わない** と明記
-- 一方、Inputの具体的な保持日数、zero-retention、リージョン選択、Jev APIの公開SLAは未確認
+- SDK / API / cookbooksは公開済み
+- 第三者の実装・benchmarkも出始めている
+
+現時点では、**新しい判断プリミティブとして検証する段階**です。
+
+出典: [TypeSafe発表](https://typesafe.ai/blog/introducing-system-one-models-and-jev) / [DCVC](https://www.dcvc.com/news-insights/typesafe-emerges-from-stealth-with-a-new-way-of-doing-ai/)
+
+---
+
+<!-- {"key":"status-production"} -->
+# production利用では契約・privacy・availabilityがまだ重要な確認項目
+
+- Privacy Policy: API等のInputをtraining / fine-tuningに使わない
+- 具体的な保持日数・zero-retention・リージョン選択は未確認
+- Jev APIの公開SLAは未確認
 - 独立したaccuracy / calibration評価はまだ少ない
-- version、rate limit、価格は継続確認が必要
+- launch直後には需要増によるcapacity問題も報道された
 
-現時点では、**新しい判断プリミティブとして有望かを検証する段階**と整理します。
+**model性能とproduction条件を別々に確認する必要があります。**
 
-出典: [TypeSafe発表](https://typesafe.ai/blog/introducing-system-one-models-and-jev) / [Privacy Policy](https://typesafe.ai/legal/privacy-policy) / [DCVC](https://www.dcvc.com/news-insights/typesafe-emerges-from-stealth-with-a-new-way-of-doing-ai/)
+出典: [Privacy Policy](https://typesafe.ai/legal/privacy-policy) / [TechCrunch](https://techcrunch.com/2026/09/18/a-new-kind-of-ai-model-from-a-chatgpt-inventor-is-thrilling-developers/)
 
 ---
 
@@ -392,16 +405,24 @@ early access段階では、**現在の仕様を固定値として扱わないこ
 ---
 
 <!-- {"key":"conclusion"} -->
-# 現時点のまとめ
+# 現時点のまとめ — Jevが向く場所
 
-- Jevは、生成ではなく **狭い意味判断をcodeへ返す専用モデル**
-- 用途はagent制御、retrieval / verification、guardrail、業務分類、context管理、real-time / interactiveの**6系統**に整理できる
-- 公式DOOMは10Hzだが、日本からの第三者ゲーム実測は約0.5秒/判断の例があり、地域差は無視できない
-- ゲームでは毎フレーム処理ではなく、**候補をcodeで制約した低頻度の意味判断層**として使う方が現実的
-- 型付き出力でも意味的な誤判定は残るため、`confidence` とfallback設計が必要
-- Inputの非学習利用は公式確認できたが、保持期間・zero-retention・SLAは未確認
-- early accessのため、version・価格・SLA・accuracy / calibrationは継続確認が必要
+- **生成ではなく、狭い意味判断をcodeへ返す**専用モデル
+- 用途はagent制御、retrieval、guardrail、業務分類、context管理、interactive
+- 回答空間を限定でき、判断を次の処理が直接使える場所ほど適合しやすい
+- ゲームでは毎フレーム処理でなく、候補をcodeで絞った意味判断層に置く
 
-**Code calculates. Jev judges.** が成立する狭い判断ほど、Jevの適合度は高いと考えられます。
+**Code calculates. Jev judges.** が基本の役割分担です。
+
+---
+
+<!-- {"key":"conclusion-caveats"} -->
+# 現時点のまとめ — まだ前提にしてはいけないこと
+
+- 公式DOOMの10Hzを、日本から常時再現できるとは限らない
+- 型付き出力でも**意味的な誤判定**は残る
+- LLM logit / rule / utility AI / 専用modelでも類似処理は可能
+- `confidence` とfallbackを含むsystem設計が必要
+- early accessのためversion・価格・SLA・calibrationは継続確認
 
 根拠・未確認事項・更新履歴: [`research.md`](research.md)
