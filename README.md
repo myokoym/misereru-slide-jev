@@ -46,14 +46,14 @@ Jev資料をAIで更新する場合は、最初に [`AGENTS.md`](AGENTS.md) を�
 
 ## 現在の調査基準日
 
-2026-09-18
+2026-09-21
 
 ## 主な追跡対象
 
 - Jevのmodel update / changelog / jaggedness
 - price / latency / rate limit / early access条件
 - accuracy / calibrationの独立検証
-- agent routing / browser automation / RAG / guardrailでの実用例
+- agent routing / browser automation / RAG / guardrail / workflow分類 / context managementでの実用例
 - real-time / game / interactive用途の公開デモ、harness、再現実測
 - 日本・アジア圏からの実測とリージョン差
 - OpenAI / Anthropic / Google等の既存モデルとの役割分担
