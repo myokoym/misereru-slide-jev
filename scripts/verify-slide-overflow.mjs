@@ -76,7 +76,7 @@ try {
 
   const layoutDir = resolve(root, 'dist/layout-check');
   await mkdir(layoutDir, { recursive: true });
-  const sectionHandles = await page.$('.marpit section');
+  const sectionHandles = await page.$$('.marpit section');
   for (let index = 0; index < sectionHandles.length; index += 1) {
     await sectionHandles[index].screenshot({
       path: join(layoutDir, `slide-${String(index + 1).padStart(2, '0')}.png`),
