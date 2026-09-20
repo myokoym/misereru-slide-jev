@@ -3,7 +3,7 @@
 
 TypeSafe AIの「生成しない判断モデル」は、どこまで実用的か
 
-2026-09-18 時点の継続調査
+2026-09-21 時点の継続調査
 
 ---
 
@@ -251,34 +251,82 @@ TypeSafeは `Jev 1.13 jaggedness` として既知の弱点を公開していま�
 
 ---
 
+<!-- {"key":"usecases-map"} -->
+# 用途は業界ではなく「何を判断させるか」で6系統に整理できる
+
+| 系統 | 代表例 |
+| --- | --- |
+| Agent / harness制御 | model・tool・subagent選択、continue / retry / stop |
+| Retrieval / evidence | RAG採否、reranking、citation支持 |
+| Guardrail / verification | jailbreak、harm、command safety |
+| 業務workflow分類 | 問い合わせ・障害・email・priority分類 |
+| Batch filtering / context管理 | parallel判定、keep / drop、semantic filtering |
+| Real-time / interactive | browser次行動、DOOM、各種game decision |
+
+共通条件は、**回答空間を限定でき、返った判断をcodeが直接使えること**です。
+
+出典: [TypeSafe docs](https://docs.typesafe.ai/llms.txt) / [Vercel: When to use Jev](https://vercel.com/i/when-to-use-jev)
+
+---
+
 <!-- {"key":"usecases-routing"} -->
-# routing・制御・分類では、判断結果をそのまま処理へつなげやすい
+# Agent / harness制御では「次に何をするか」だけをJevへ切り出せる
 
-公式cookbookや第三者実装で確認できる用途です。
-
-- LLM / agent のモデルルーティング
+- LLM / subagent のrouting
 - tool / skill候補の選択
-- retry / halt の判定
-- guardrail / moderation
-- 問い合わせ・障害・案件の分類
+- continue / retry / ask user / stop
+- queue・priority・escalation分類
 
-共通するのは、**候補や評価軸を事前に限定しやすいこと**です。
+実行権限、tool引数検証、決定済みpolicyはcodeへ残し、**曖昧な次アクション選択だけをJevへ渡す**構成です。
+
+Vercelも、agent loop内のdecision pointへJevを置き、tool executionとpolicyはapplication codeへ残す使い分けを紹介しています。
+
+出典: [Vercel: Jev agent control](https://vercel.com/i/jev-agent-control) / [TypeSafe docs](https://docs.typesafe.ai/llms.txt)
+
+---
+
+<!-- {"key":"usecases-retrieval"} -->
+# Retrieval・verificationでは「採用するか」「支持するか」を判定する
+
+- RAG passage の採用・棄却
+- citationがclaimを支持しているか
+- 検索結果のreranking
+- prompt injection / harmful outputの検査
+
+公式reranking cookbookでは、CLERC legal query 40件でBM25候補をJevでrerankし、**top-1 5% → 18%、top-10 38% → 62%** と報告しています。ただしTypeSafe自身のharnessによる結果で、独立検証ではありません。
 
 出典: [TypeSafe Cookbooks / docs index](https://docs.typesafe.ai/llms.txt)
 
 ---
 
-<!-- {"key":"usecases-retrieval"} -->
-# retrieval・agent内部の評価にも、狭い意味判断として差し込める
+<!-- {"key":"usecases-production"} -->
+# 第三者報告でもsafety判定と業務分類への投入が始まっている
 
-- RAG passage の採用・棄却
-- citationの支持関係チェック
-- 検索結果のreranking
-- ブラウザエージェントの次アクション選択
+| 例 | 報告内容 | 留保 |
+| --- | --- | --- |
+| Vercel command safety classifier | Luna 5.6からJevへ替え、5〜18倍高速かつaccuracyも高かった | dataset・試行回数・accuracy値は未公開 |
+| Bryo AI business-email分類 | Geminiがわずかに高精度、Jevは10〜20倍安価 | 開発者報告で再現benchmarkではない |
 
-公式reranking cookbookでは、CLERC legal query 40件でBM25候補をJevでrerankし、**top-1 5% → 18%、top-10 38% → 62%** と報告しています。ただしTypeSafe自身のharnessによる結果で、独立検証ではありません。
+これは「Jevが常に高精度」という証拠ではなく、**safety / workflow分類でcost・latency・confidenceを含めて採用判断されている**例です。
 
-出典: [TypeSafe Cookbooks / docs index](https://docs.typesafe.ai/llms.txt)
+出典: [TechCrunch, 2026-09-18](https://techcrunch.com/2026/09/18/a-new-kind-of-ai-model-from-a-chatgpt-inventor-is-thrilling-developers/)
+
+---
+
+<!-- {"key":"usecases-context"} -->
+# Context管理では「要約する」代わりに、原文を残すか捨てるか判定できる
+
+`fast-jev-compaction` はClaude Codeのtool call / resultを、**今後も必要か**というbounded decisionへ変換しています。
+
+- user / assistant本文は生成し直さず保持
+- tool履歴を keep / truncate / drop
+- Desktop sessionで **187,635 → 33,447 tokens（82%削減）を1,351ms**
+- n=3の小規模実測で、長期task qualityは未評価
+- Jev失敗時や削減不足では組込みsummaryへfallback
+
+生成要約の置換ではなく、**生成問題を選別問題へ変形する**用途です。
+
+出典: [Zenn: fast-jev-compaction](https://zenn.dev/orangewk/articles/claude-code-fast-jev-compaction)
 
 ---
 
@@ -333,6 +381,7 @@ early access段階では、**現在の仕様を固定値として扱わないこ
 
 - 日本・アジアからのlatency、特にリアルタイム用途
 - game / browser / coding agent / RAGでの実運用例
+- command safety / workflow分類 / context managementの実運用例
 - 独立したaccuracy / calibration評価
 - OpenAI・Anthropic・Google等のstructured decision系との比較
 
@@ -346,7 +395,7 @@ early access段階では、**現在の仕様を固定値として扱わないこ
 # 現時点のまとめ
 
 - Jevは、生成ではなく **狭い意味判断をcodeへ返す専用モデル**
-- 低単価・数百ms級で、routing・ranking・guardrail・agent内部判断に加え、**リアルタイム寄りのインタラクティブ用途**も射程に入る
+- 用途はagent制御、retrieval / verification、guardrail、業務分類、context管理、real-time / interactiveの**6系統**に整理できる
 - 公式DOOMは10Hzだが、日本からの第三者ゲーム実測は約0.5秒/判断の例があり、地域差は無視できない
 - ゲームでは毎フレーム処理ではなく、**候補をcodeで制約した低頻度の意味判断層**として使う方が現実的
 - 型付き出力でも意味的な誤判定は残るため、`confidence` とfallback設計が必要
