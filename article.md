@@ -36,6 +36,57 @@ Jevを使うときは、何でもモデルへ任せるのではなく、意味�
 
 出典: [Quick Start](https://docs.typesafe.ai/introduction/quickstart) / [Confidence](https://docs.typesafe.ai/confidence)
 
+## どこで使うと効果が出やすいか
+
+Jevの用途は業界名で並べるより、**どの種類の判断をソフトウェアから切り出すか**で整理した方が分かりやすくなります。
+
+| 用途系統 | 代表例 | Jevが返すもの |
+| --- | --- | --- |
+| Agent / harness制御 | model / subagent routing、tool選択、continue / retry / stop | 次アクション |
+| Retrieval / evidence | RAG passage採否、reranking、citation確認 | 採否・優先度・支持判定 |
+| Guardrail / verification | jailbreak / harm、command safety、agent trace検査 | 通過 / 拒否・risk判断 |
+| 業務workflow分類 | 問い合わせ、障害、business email、priority | queue・分類・escalation |
+| Batch filtering / context管理 | parallel questions、semantic filtering、keep / drop | 大量候補の選別 |
+| Real-time / interactive | browser次行動、DOOM、Mario、五目並べ、Snake | 現在stateでの行動選択 |
+
+共通しているのは、文章そのものを作る必要がなく、回答空間を事前に限定できることです。返ってきた判断を、次のcodeやagent stepが直接利用できます。
+
+出典: [TypeSafe Cookbooks / docs index](https://docs.typesafe.ai/llms.txt) / [Vercel: When should you use Jev?](https://vercel.com/i/when-to-use-jev)
+
+## Agent / harness制御と業務workflow
+
+agent loopでは、Jevへ「次に何をするか」だけを任せられます。modelやsubagentのrouting、tool候補の選択、continue / retry / ask user / stopなどです。実際のtool実行、権限確認、決定済みpolicyはcode側へ残します。
+
+Vercelも、Jevをagent loop内のdecision pointへ置き、tool executionとpolicyはapplication codeへ残す構成を紹介しています。
+
+さらにTechCrunchは、Vercelのsoftware engineerによるcommand safety classifierの利用報告を紹介しています。ChatGPT Luna 5.6からJevへ置き換えたところ、**5〜18倍高速で、accuracyも高かった**とされています。ただしdataset、試行回数、accuracy値は公開されていないため、一般的なbenchmarkとしては扱えません。
+
+同じ記事では、Bryo AIによるbusiness-email classificationも紹介されています。Geminiの方がaccuracyはわずかに高かった一方、Jevは**10〜20倍安価**だったという報告です。ここでも「Jevが常に高精度」なのではなく、workflowに必要な精度、cost、latency、confidenceをまとめて評価する例と見る方が適切です。
+
+出典: [Vercel: Agent control](https://vercel.com/i/jev-agent-control) / [TechCrunch](https://techcrunch.com/2026/09/18/a-new-kind-of-ai-model-from-a-chatgpt-inventor-is-thrilling-developers/)
+
+## Retrieval・evidence・guardrail
+
+検索やRAGでは、生成の前後に「このpassageを採用するか」「このcitationはclaimを支持しているか」「どの検索結果を上位へ置くか」という判断があります。Jevはこのような採否・ranking・verificationへ差し込めます。
+
+公式reranking cookbookでは、CLERC legal query 40件についてBM25候補をJevでrerankし、top-1 accuracyを5%から18%、top-10を38%から62%へ改善したと報告しています。ただしTypeSafe自身のharnessでの結果であり、独立benchmarkではありません。
+
+guardrailも同じ形です。prompt injection、jailbreak、harmful output、command safetyのような検査を、自由文生成ではなく限定されたrisk判断へ変換します。
+
+出典: [TypeSafe Cookbooks](https://docs.typesafe.ai/llms.txt)
+
+## Batch filtering / context管理
+
+Jevの使い方として特徴的なのが、**生成して要約する代わりに、何を残すかを判断する**方法です。
+
+`fast-jev-compaction` はClaude Codeのtool call / resultごとに「今後も必要か」を判定し、keep / truncate / dropへ振り分けます。userとassistantの本文は生成し直さず、そのまま残します。
+
+公開された小規模実測では、Desktop sessionで**187,635 tokensから33,447 tokensへ82%削減し、1,351ms**で処理しています。ただしn=3で、長期的なtask qualityや再読コストは未評価です。Jev呼び出しに失敗した場合や削減率が低い場合は、Claude Codeの組込みsummaryへfallbackします。
+
+これは「高速な要約モデル」という使い方ではありません。**生成問題をkeep / dropというbounded decisionへ変形する**ことでJevを使っています。
+
+出典: [Zenn: fast-jev-compaction](https://zenn.dev/orangewk/articles/claude-code-fast-jev-compaction)
+
 ## 価格はかなり低い
 
 2026年9月18日時点で、TypeSafe公式サイトに表示されている入力単価は**10億tokensあたり42ドル**です。100万input tokensへ換算すると**0.042ドル**になります。公式発表ではoutput tokensは無料と明記されています。
@@ -181,57 +232,6 @@ TypeSafeはJevの既知の弱点を`jaggedness`として公開しています。
 意味判断へ特化したモデルだからこそ、任せる仕事と任せない仕事を明確に分ける必要があります。
 
 出典: [TypeSafe docs index](https://docs.typesafe.ai/llms.txt)
-
-## どこで使うと効果が出やすいか
-
-Jevの用途は業界名で並べるより、**どの種類の判断をソフトウェアから切り出すか**で整理した方が分かりやすくなります。
-
-| 用途系統 | 代表例 | Jevが返すもの |
-| --- | --- | --- |
-| Agent / harness制御 | model / subagent routing、tool選択、continue / retry / stop | 次アクション |
-| Retrieval / evidence | RAG passage採否、reranking、citation確認 | 採否・優先度・支持判定 |
-| Guardrail / verification | jailbreak / harm、command safety、agent trace検査 | 通過 / 拒否・risk判断 |
-| 業務workflow分類 | 問い合わせ、障害、business email、priority | queue・分類・escalation |
-| Batch filtering / context管理 | parallel questions、semantic filtering、keep / drop | 大量候補の選別 |
-| Real-time / interactive | browser次行動、DOOM、Mario、五目並べ、Snake | 現在stateでの行動選択 |
-
-共通しているのは、文章そのものを作る必要がなく、回答空間を事前に限定できることです。返ってきた判断を、次のcodeやagent stepが直接利用できます。
-
-出典: [TypeSafe Cookbooks / docs index](https://docs.typesafe.ai/llms.txt) / [Vercel: When should you use Jev?](https://vercel.com/i/when-to-use-jev)
-
-## Agent / harness制御と業務workflow
-
-agent loopでは、Jevへ「次に何をするか」だけを任せられます。modelやsubagentのrouting、tool候補の選択、continue / retry / ask user / stopなどです。実際のtool実行、権限確認、決定済みpolicyはcode側へ残します。
-
-Vercelも、Jevをagent loop内のdecision pointへ置き、tool executionとpolicyはapplication codeへ残す構成を紹介しています。
-
-さらにTechCrunchは、Vercelのsoftware engineerによるcommand safety classifierの利用報告を紹介しています。ChatGPT Luna 5.6からJevへ置き換えたところ、**5〜18倍高速で、accuracyも高かった**とされています。ただしdataset、試行回数、accuracy値は公開されていないため、一般的なbenchmarkとしては扱えません。
-
-同じ記事では、Bryo AIによるbusiness-email classificationも紹介されています。Geminiの方がaccuracyはわずかに高かった一方、Jevは**10〜20倍安価**だったという報告です。ここでも「Jevが常に高精度」なのではなく、workflowに必要な精度、cost、latency、confidenceをまとめて評価する例と見る方が適切です。
-
-出典: [Vercel: Agent control](https://vercel.com/i/jev-agent-control) / [TechCrunch](https://techcrunch.com/2026/09/18/a-new-kind-of-ai-model-from-a-chatgpt-inventor-is-thrilling-developers/)
-
-## Retrieval・evidence・guardrail
-
-検索やRAGでは、生成の前後に「このpassageを採用するか」「このcitationはclaimを支持しているか」「どの検索結果を上位へ置くか」という判断があります。Jevはこのような採否・ranking・verificationへ差し込めます。
-
-公式reranking cookbookでは、CLERC legal query 40件についてBM25候補をJevでrerankし、top-1 accuracyを5%から18%、top-10を38%から62%へ改善したと報告しています。ただしTypeSafe自身のharnessでの結果であり、独立benchmarkではありません。
-
-guardrailも同じ形です。prompt injection、jailbreak、harmful output、command safetyのような検査を、自由文生成ではなく限定されたrisk判断へ変換します。
-
-出典: [TypeSafe Cookbooks](https://docs.typesafe.ai/llms.txt)
-
-## Batch filtering / context管理
-
-Jevの使い方として特徴的なのが、**生成して要約する代わりに、何を残すかを判断する**方法です。
-
-`fast-jev-compaction` はClaude Codeのtool call / resultごとに「今後も必要か」を判定し、keep / truncate / dropへ振り分けます。userとassistantの本文は生成し直さず、そのまま残します。
-
-公開された小規模実測では、Desktop sessionで**187,635 tokensから33,447 tokensへ82%削減し、1,351ms**で処理しています。ただしn=3で、長期的なtask qualityや再読コストは未評価です。Jev呼び出しに失敗した場合や削減率が低い場合は、Claude Codeの組込みsummaryへfallbackします。
-
-これは「高速な要約モデル」という使い方ではありません。**生成問題をkeep / dropというbounded decisionへ変形する**ことでJevを使っています。
-
-出典: [Zenn: fast-jev-compaction](https://zenn.dev/orangewk/articles/claude-code-fast-jev-compaction)
 
 ## browser-useでは限定的ながら25%短縮の報告もある
 
