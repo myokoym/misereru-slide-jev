@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import puppeteer from 'puppeteer-core';
@@ -73,6 +73,16 @@ try {
       };
     });
   });
+
+  const layoutDir = resolve(root, 'dist/layout-check');
+  await mkdir(layoutDir, { recursive: true });
+  const sectionHandles = await page.$('.marpit section');
+  for (let index = 0; index < sectionHandles.length; index += 1) {
+    await sectionHandles[index].screenshot({
+      path: join(layoutDir, `slide-${String(index + 1).padStart(2, '0')}.png`),
+    });
+  }
+  await writeFile(join(layoutDir, 'report.json'), `${JSON.stringify(report, null, 2)}\n`, 'utf8');
 
   const failures = report.filter((slide) => slide.overflow);
   if (failures.length > 0) {
