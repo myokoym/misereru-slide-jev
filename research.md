@@ -1,6 +1,6 @@
 # Jev 継続調査ノート
 
-最終更新: 2026-09-20
+最終更新: 2026-09-21
 
 このファイルは、TypeSafe AI の **Jev / System One Models** を継続的に調査するための根拠メモです。
 `slides.md` は見せるための要約、ここは出典・留保・第三者検証まで残す調査台帳として扱います。
@@ -154,18 +154,20 @@ TypeSafe公式ドキュメントには `Jev 1.13 jaggedness` という既知の�
 
 ## 7. 実用例
 
-現時点でJevと相性が良さそうな用途は、自由文生成より **機械向けの狭い意味判断** です。
+現時点でJevと相性が良さそうなのは、自由文生成より **機械向けの狭い意味判断** です。公開例を役割で整理すると、主に次の6系統に分けられます。
 
-- LLM / agent のモデルルーティング
-- サポート問い合わせの振り分け
-- エラーの retry / halt 判定
-- RAG passage の採用・棄却
-- citation の支持関係チェック
-- guardrail判定
-- skill / tool候補の選択
-- 検索結果のreranking
-- ブラウザエージェントの次アクション選択
-- ゲームやインタラクティブアプリ内の低遅延な意味判断
+| 用途系統 | 具体例 | Jevが担当する判断 |
+| --- | --- | --- |
+| Agent / harness制御 | model / subagent routing、tool / skill選択、continue / retry / ask / stop | 次に何をするか |
+| Retrieval / evidence | RAG passage採否、reranking、citation支持関係 | どれを採用・優先・支持とみなすか |
+| Guardrail / verification | prompt injection、jailbreak / harm、command safety、agent trace監視 | 実行・通過させてよいか |
+| 業務workflow分類 | 問い合わせ、障害、business email、priority / escalation | どのqueue・分類・処理へ送るか |
+| Batch filtering / context管理 | parallel questions、line単位semantic search、tool履歴のkeep / drop | 大量候補のうち何を残すか |
+| Real-time / interactive | browser next action、DOOM、Mario、五目並べ、Snake | 現在stateで次にどの行動を選ぶか |
+
+この6系統は排他的ではありません。たとえばcommand safetyはagent制御とguardrailの両方に関係します。重要なのは業界名ではなく、**回答空間を事前に限定でき、返った判断をcodeが直接使えるか**です。
+
+証拠レベルも用途ごとに異なります。公式cookbookだけの例、第三者の実装、実運用者の報告、再現可能benchmarkを分けて扱います。
 
 公式 cookbook はかなり充実しており、Jevを「生成モデルの代替」ではなく、生成モデルの前後や内部に置く判断プリミティブとして使う例が多いです。
 
